@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/Paperspace/paperspace-go"
-	"github.com/cedana/cedana-client/db"
-	cedana "github.com/cedana/cedana-client/types"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/db"
+	cedana "github.com/cedana/cedana-cli/types"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 )

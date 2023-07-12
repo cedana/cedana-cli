@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cedana/cedana-client/types"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/types"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/rs/zerolog"

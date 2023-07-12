@@ -9,12 +9,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/cedana/cedana-client/db"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/db"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
-	cedana "github.com/cedana/cedana-client/types"
+	cedana "github.com/cedana/cedana-cli/types"
 )
 
 var lastUsedRegion string

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	cedana "github.com/cedana/cedana-client/types"
+	cedana "github.com/cedana/cedana-cli/types"
 )
 
 type ConfigClient struct {

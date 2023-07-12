@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cedana/cedana-client/db"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/db"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/spf13/cobra"
 )
 

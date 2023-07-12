@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cedana/cedana-client/db"
-	"github.com/cedana/cedana-client/market"
-	"github.com/cedana/cedana-client/types"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/db"
+	"github.com/cedana/cedana-cli/market"
+	"github.com/cedana/cedana-cli/types"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/olekukonko/tablewriter"
@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/utils/strings/slices"
 
-	cedana "github.com/cedana/cedana-client/types"
+	cedana "github.com/cedana/cedana-cli/types"
 )
 
 // call ./cedana-orch run dockerfile to:

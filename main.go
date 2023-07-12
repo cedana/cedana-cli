@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/cedana/cedana-client/cmd"
+	"github.com/cedana/cedana-cli/cmd"
 )
 
 var (

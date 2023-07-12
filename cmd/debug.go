@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cedana/cedana-client/market/catalog"
-	"github.com/cedana/cedana-client/types"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/market/catalog"
+	"github.com/cedana/cedana-cli/types"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

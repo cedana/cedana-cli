@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cedana/cedana-client/types"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/types"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/glebarez/sqlite"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog"

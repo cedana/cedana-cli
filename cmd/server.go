@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/cedana/cedana-client/server"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/server"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"

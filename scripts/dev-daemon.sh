@@ -1,1 +1,1 @@
-.././cedana-orch daemon mock -o orch123 -j testjob -c client123  
+.././cedana-cli daemon mock -o orch123 -j testjob -c client123  

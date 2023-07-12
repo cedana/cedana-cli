@@ -10,15 +10,15 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/cedana/cedana-client/market"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/market"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/manifoldco/promptui"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// Bootstrap cedana-orch
+// Bootstrap cedana-cli
 var bootstrapCmd = &cobra.Command{
 	Use:   "bootstrap",
 	Short: "Setup host for cedana usage",

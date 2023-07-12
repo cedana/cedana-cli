@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cedana/cedana-client/db"
-	"github.com/cedana/cedana-client/types"
-	"github.com/cedana/cedana-client/utils"
+	"github.com/cedana/cedana-cli/db"
+	"github.com/cedana/cedana-cli/types"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"

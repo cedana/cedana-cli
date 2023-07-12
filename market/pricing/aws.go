@@ -8,9 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	aws_helpers "github.com/cedana/cedana-client/aws"
-	cedana "github.com/cedana/cedana-client/types"
-	"github.com/cedana/cedana-client/utils"
+	aws_helpers "github.com/cedana/cedana-cli/aws"
+	cedana "github.com/cedana/cedana-cli/types"
+	"github.com/cedana/cedana-cli/utils"
 	"github.com/rs/zerolog"
 )
 

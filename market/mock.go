@@ -1,6 +1,6 @@
 package market
 
-import cedana "github.com/cedana/cedana-client/types"
+import cedana "github.com/cedana/cedana-cli/types"
 
 // a mock provider that implements the Provider interface
 

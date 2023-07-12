@@ -7,7 +7,7 @@ import (
 var (
 	// Used for flags.
 	rootCmd = &cobra.Command{
-		Use:   "cedana-orch",
+		Use:   "cedana-cli",
 		Short: "Instance brokerage and orchestration system for Cedana",
 		Long: `________  _______   ________  ________  ________   ________     
 |\   ____\|\  ___ \ |\   ___ \|\   __  \|\   ___  \|\   __  \    

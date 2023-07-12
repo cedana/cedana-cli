@@ -1,4 +1,4 @@
-module github.com/cedana/cedana-client
+module github.com/cedana/cedana-cli
 
 go 1.18
 
