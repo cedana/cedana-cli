@@ -1,4 +1,4 @@
-module github.com/nravic/cedana-orch
+module github.com/cedana/cedana-client
 
 go 1.18
 

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/cedana/cedana-client/types"
+	"github.com/cedana/cedana-client/utils"
 	"github.com/glebarez/sqlite"
-	"github.com/nravic/cedana-orch/types"
-	"github.com/nravic/cedana-orch/utils"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"

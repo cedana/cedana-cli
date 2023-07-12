@@ -10,18 +10,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cedana/cedana-client/db"
+	"github.com/cedana/cedana-client/market"
+	"github.com/cedana/cedana-client/types"
+	"github.com/cedana/cedana-client/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/nravic/cedana-orch/db"
-	"github.com/nravic/cedana-orch/market"
-	"github.com/nravic/cedana-orch/types"
-	"github.com/nravic/cedana-orch/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"k8s.io/utils/strings/slices"
 
-	cedana "github.com/nravic/cedana-orch/types"
+	cedana "github.com/cedana/cedana-client/types"
 )
 
 // call ./cedana-orch run dockerfile to:
@@ -249,31 +249,6 @@ var restoreCmd = &cobra.Command{
 
 		return nil
 	},
-}
-
-// TODO - redo flow, this is a big code-smell
-func (r *Runner) runJob() error {
-	candidates := market.Optimize(r.jobFile)
-	// set up NATS first
-	r.logger.Info().Msg("setting up job...")
-	r.job.State = types.JobStatePending
-	err := r.SetupNATSForJob()
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("could not set up inter-cloud broker architecture")
-	}
-
-	worker, err := r.deployWorker(candidates, true)
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("could not deploy worker")
-		return err
-	}
-
-	if err := r.deployOrchestrator(*worker); err != nil {
-		r.logger.Fatal().Err(err).Msg("could not deploy orchestrator")
-		return err
-	}
-
-	return nil
 }
 
 // restoreJob manually restores the most recent checkpoint onto a new instance

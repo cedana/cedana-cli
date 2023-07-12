@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nravic/cedana-orch/db"
-	cedana "github.com/nravic/cedana-orch/types"
-	"github.com/nravic/cedana-orch/utils"
+	"github.com/cedana/cedana-client/utils"
+	"github.com/nravic/cedana-client/db"
+	cedana "github.com/nravic/cedana-client/types"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"

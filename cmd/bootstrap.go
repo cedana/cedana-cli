@@ -10,9 +10,9 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/cedana/cedana-client/market"
+	"github.com/cedana/cedana-client/utils"
 	"github.com/manifoldco/promptui"
-	"github.com/nravic/cedana-orch/market"
-	"github.com/nravic/cedana-orch/utils"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

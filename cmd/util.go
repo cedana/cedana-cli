@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/nravic/cedana-orch/aws"
-	"github.com/nravic/cedana-orch/utils"
+	"github.com/cedana/cedana-client/aws"
+	"github.com/cedana/cedana-client/utils"
 	"github.com/spf13/cobra"
 )
 
