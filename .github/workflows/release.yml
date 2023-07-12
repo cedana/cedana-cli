@@ -1,0 +1,40 @@
+name: release
+
+on:
+  push: 
+    tags: 
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      -
+        name: Set up Go
+        uses: actions/setup-go@v4
+      -
+        name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+      - 
+        name: Upload to PackageCloud
+        continue-on-error: true
+        uses: docker://lpenz/ghaction-packagecloud:0.4
+        with: 
+          user: nravic
+          repository: "cedana-orch/ubuntu/jammy"
+        env:
+          PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}

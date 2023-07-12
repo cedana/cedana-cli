@@ -1,0 +1,55 @@
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+builds:
+  - ldflags:
+      - -X "main.version=$(git describe --tags --abbrev=0)"
+    env:
+      - CGO_ENABLED=0
+    goarch: 
+      - amd64
+    goos:
+      - linux
+      - darwin
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+nfpms:
+  - 
+    id: default
+    package_name: cedana-orch
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Cedana Systems
+
+    homepage: cedana.ai
+    maintainer: Niranjan Ravichandra <nravic@cedana.ai>
+
+    description: |-
+      Orchestrator software for fast, adaptive checkpointing for cloud brokerage.
+
+    license: GNU APLv3
+
+    formats:
+      - deb
+      - rpm
+      - archlinux  # Since GoReleaser v1.13.
+    
+    suggests:
+      - criu 
+brews: 
+  - homepage: cedana.ai 
+    folder: Formula 
+    commit_author: 
+      name: nravic 
+      email: nravic@cedana.ai
+    tap: 
+      owner: cedana 
+      name: homebrew-cedana-client 
