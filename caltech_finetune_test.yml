@@ -1,0 +1,18 @@
+instance_specs:
+  gpu: "NVIDIA" 
+  max_price_usd_hour: 1.0
+work_dir: "work_dir"
+setup:
+  run: 
+    - "sudo apt-get update && sudo apt-get install -y python3 python3-venv"
+    - "python3 -m venv venv"
+    - "source venv/bin/activate"
+    - "pip install torch trill-proteins"
+    - "pip install pyg-lib torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.13.0+cu117.html"
+    - "git clone https://github.com/martinez-zacharya/TRILL"
+task:
+  run:
+    - "trill example_1 1 finetune TRILL/trill/data/query.fasta"
+restored_task:
+  run:
+    - "trill example_1 1 finetune TRILL/trill/data/query.fasta" # with checkpoint

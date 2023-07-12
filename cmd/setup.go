@@ -1,0 +1,677 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/nravic/cedana-orch/db"
+	cedana "github.com/nravic/cedana-orch/types"
+	"github.com/nravic/cedana-orch/utils"
+	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh"
+)
+
+type InstanceSetup struct {
+	logger   *zerolog.Logger
+	cfg      *utils.CedanaConfig
+	instance cedana.Instance
+	jobFile  *cedana.JobFile
+	job      *cedana.Job
+}
+
+var userOnly bool
+var jobFile string
+var instanceId string
+
+var SetupCmd = &cobra.Command{
+	Use:    "setup",
+	Short:  "Manually set up a launched instance with Cedana defaults and user-provided scripts",
+	Long:   "Provide commands to run on the remote instance in user_commands.yaml in the ~/.cedana config folder",
+	Hidden: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// ClientSetup takes a SpotInstance as input - match against the state file
+		db := db.NewDB()
+		l := utils.GetLogger()
+		jobFile, err := cedana.InitJobFile(jobFile)
+		if err != nil {
+			l.Fatal().Err(err).Msg("could not set up cedana job")
+		}
+
+		instance := db.GetInstanceByProviderId(instanceId)
+		if instance.IPAddress == "" {
+			return fmt.Errorf("could not find instance with id %s", instanceId)
+		}
+		cfg, err := utils.InitCedanaConfig()
+		if err != nil {
+			return fmt.Errorf("could not load spot config %v", err)
+		}
+
+		is := InstanceSetup{
+			logger:   &l,
+			cfg:      cfg,
+			instance: *instance,
+			jobFile:  jobFile,
+		}
+
+		if userOnly {
+			is.execUserCommands()
+		} else {
+			is.ClientSetup(true)
+		}
+		return nil
+	},
+}
+
+func BuildInstanceSetup(i cedana.Instance, job cedana.Job) *InstanceSetup {
+	l := utils.GetLogger()
+
+	cfg, err := utils.InitCedanaConfig()
+	if err != nil {
+		l.Fatal().Err(err).Msg("could not load spot config")
+	}
+
+	jobFile, err := cedana.InitJobFile(job.JobFilePath)
+	if err != nil {
+		l.Fatal().Err(err).Msg("could not parse cedana job file")
+	}
+
+	return &InstanceSetup{
+		logger:   &l,
+		cfg:      cfg,
+		instance: i,
+		jobFile:  jobFile,
+		job:      &job,
+	}
+}
+
+func (is *InstanceSetup) CreateConn() (*ssh.Client, error) {
+	var keyPath string
+	var user string
+
+	if is.instance.Provider == "aws" {
+		user = is.cfg.AWSConfig.User
+		if user == "" {
+			user = "ubuntu"
+		}
+		keyPath = is.cfg.AWSConfig.SSHKeyPath
+	}
+
+	if is.instance.Provider == "paperspace" {
+		user = is.cfg.PaperspaceConfig.User
+		if user == "" {
+			user = "paperspace"
+		}
+		keyPath = is.cfg.PaperspaceConfig.SSHKeyPath
+	}
+
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error loading keyfile to ssh into instance")
+		return nil, err
+	}
+	signer, err := ssh.ParsePrivateKey(key)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error parsing key")
+		return nil, err
+	}
+	config := &ssh.ClientConfig{
+		User:              user,
+		Auth:              []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyAlgorithms: []string{"ssh-ed25519"},
+		// not sure how much of a mistake this is, considering the setup is only done once
+		// and everything happens as soon as AWS gives us the IP address.
+		// TODO NR: make more secure!
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	var conn *ssh.Client
+	for i := 0; i < 5; i++ {
+		conn, err = ssh.Dial("tcp", fmt.Sprintf("%s:22", is.instance.IPAddress), config)
+		if err == nil {
+			break
+		}
+		is.logger.Warn().Msgf("instance setup failed (attempt %d/%d) with error: %v. Retrying...", i+1, 5, err)
+		time.Sleep(40 * time.Second)
+
+	}
+
+	if err != nil {
+		is.logger.WithLevel(zerolog.FatalLevel).Err(err).Msg("dial failed")
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+func (is *InstanceSetup) execUserCommands() error {
+	// only runs user commands
+	conn, err := is.CreateConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	var cmds []string
+	is.buildUserSetupCommands(&cmds)
+
+	err = is.execCommands(cmds, conn)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error executing commands")
+	}
+
+	return nil
+}
+
+// provision an instance to act as an orchestrator
+func (is *InstanceSetup) OrchSetup(workerID string) error {
+	is.logger.Info().Msg("Provisioning instance as a cedana orchestrator")
+	// JWT/auth stuff?
+	conn, err := is.CreateConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// download and install cedana-orch
+	var setupCmds []string
+	is.buildOrchSetupCommands(&setupCmds, workerID)
+	is.buildCredsPassthrough(&setupCmds)
+	err = is.execCommands(setupCmds, conn)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error executing commands")
+		return err
+	}
+
+	// set up systemctl commands
+	var setupOrchDaemonCmds []string
+	is.buildOrchestratorServerCommands(&setupOrchDaemonCmds, workerID)
+	err = is.execCommands(setupOrchDaemonCmds, conn)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error executing commands")
+		return err
+	}
+
+	// start orchestrator (as async to avoid hanging)
+	var startOrchCmd []string
+	is.startOrchServerCommand(&startOrchCmd)
+	err = is.execCommandAsync(startOrchCmd, conn)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error executing commands")
+		return err
+	}
+
+	return nil
+}
+
+// Runs cedana-specific and user-specified instantiation scripts for a client instance in an SSH session.
+func (is *InstanceSetup) ClientSetup(runTask bool) error {
+
+	// copy workdir if specified and exists
+	var workDir string
+	if is.jobFile.WorkDir != "" {
+		_, err := os.Stat(is.jobFile.WorkDir)
+		if err != nil {
+			// folder doesn't exist, error out and don't continue
+			return err
+		} else {
+			workDir = is.jobFile.WorkDir
+			err = is.scpWorkDir(workDir)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	var user string
+
+	if is.instance.Provider == "aws" {
+		user = is.cfg.AWSConfig.User
+		if user == "" {
+			user = "ubuntu"
+		}
+	}
+
+	if is.instance.Provider == "paperspace" {
+		user = is.cfg.PaperspaceConfig.User
+		if user == "" {
+			user = "paperspace"
+		}
+	}
+
+	conn, err := is.CreateConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// download criu, cedana client & run user-specified setup cmds
+	cmds := is.buildBaseCommands(user)
+	is.buildUserSetupCommands(&cmds)
+	err = is.execCommands(cmds, conn)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error executing commands")
+		return err
+	}
+
+	if runTask {
+		// cd into workdir (if specified) & start task (as async to prevent hanging)
+		var task []string
+		is.buildTask(&task, workDir)
+		err = is.execCommandAsync(task, conn)
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("error executing task")
+			return err
+		}
+	}
+
+	// set up cedana systemctl daemon
+	var setupCedanaDaemon []string
+	is.buildCedanaDaemonCommands(&setupCedanaDaemon, user)
+	// TODO - this is an experiment; running daemon and task synchronously
+	err = is.execCommands(setupCedanaDaemon, conn)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error executing cedana daemon")
+		return err
+	}
+
+	// start cedana daemon (as async to avoid hanging)
+	var startCedanaDaemon []string
+	is.startCedanaDaemonCommand(&startCedanaDaemon)
+	err = is.execCommandAsync(startCedanaDaemon, conn)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error starting cedana daemon")
+		return err
+	}
+
+	return nil
+}
+
+// Take a list of commands and execute them, creating a new session each time
+// avoids any issues with only being able to run session.Run once, and is more elegant
+// than timing.
+
+// TODO: Add noisy flag or move to debug logger
+func (is *InstanceSetup) execCommands(cmds []string, conn *ssh.Client) error {
+	for _, cmd := range cmds {
+		// TODO: this is pretty inefficient, we don't need a new session for each command!
+		session, err := conn.NewSession()
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("session failed")
+			return err
+		}
+		defer session.Close()
+
+		stdout, err := session.StdoutPipe()
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("error getting stdout pipe")
+			return err
+		}
+		stderr, err := session.StderrPipe()
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("error getting stderr pipe")
+			return err
+		}
+
+		// closing the session closes the stdout/errPipes, which functionally terminates
+		// these goroutines.
+		// TODO: ugly logging from this, but whatever
+		go func() {
+			_, err := io.Copy(is.logger, stdout)
+			if err != nil {
+				is.logger.Fatal().Err(err).Msg("could not copy stdout")
+			}
+		}()
+
+		go func() {
+			_, err := io.Copy(is.logger, stderr)
+			if err != nil {
+				is.logger.Fatal().Err(err).Msg("could not copy stderr")
+			}
+		}()
+
+		is.logger.Debug().Msgf("running: `%s`", cmd)
+		err = session.Run(cmd)
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("error running command on remote host")
+			return err
+		}
+	}
+	return nil
+}
+
+// exec work is different because it fires off the work in a goroutine - preventing hangups
+// TODO - should consolidate this with execCommand
+func (is *InstanceSetup) execCommandAsync(cmds []string, conn *ssh.Client) error {
+	for _, cmd := range cmds {
+		session, err := conn.NewSession()
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("session failed")
+			return err
+		}
+
+		stdout, err := session.StdoutPipe()
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("error getting stdout pipe")
+			return err
+		}
+
+		stderr, err := session.StderrPipe()
+		if err != nil {
+			is.logger.Fatal().Err(err).Msg("error getting stderr pipe")
+			return err
+		}
+
+		go func() {
+			_, err := io.Copy(is.logger, stdout)
+			if err != nil {
+				is.logger.Fatal().Err(err).Msg("could not copy stdout")
+			}
+		}()
+
+		go func() {
+			_, err := io.Copy(is.logger, stderr)
+			if err != nil {
+				is.logger.Fatal().Err(err).Msg("could not copy stderr")
+			}
+		}()
+
+		is.logger.Debug().Msgf("running: `%s`", cmd)
+		go func() {
+			err = session.Run(cmd)
+			if err != nil {
+				is.logger.Fatal().Err(err).Msg("error running command on remote host")
+			}
+			session.Close()
+		}()
+	}
+
+	// Wait for all commands to complete
+	for range cmds {
+		<-time.After(500 * time.Millisecond) // Add a small delay between commands
+	}
+
+	return nil
+}
+
+func (is *InstanceSetup) buildBaseCommands(user string) []string {
+	var b []string
+	cedanaSteps := []string{
+		// download and install the latest cedana release
+		//assumption here that it's an ubuntu box!
+		fmt.Sprintf("curl -s https://api.github.com/repos/cedana/cedana/releases/latest | grep %q | grep %q | cut -d %q -f 2,3 | xargs | wget -qi - -O cedana_client.deb",
+			"browser_download_url.*deb",
+			"amd64",
+			":",
+		),
+		"sudo apt --yes install ./cedana_client.deb",
+		"rm cedana_client.deb",
+	}
+	b = append(b, cedanaSteps...)
+
+	criuSteps := []string{
+		"sudo add-apt-repository ppa:criu/ppa",
+		"sudo apt-get update && sudo apt-get --yes install criu",
+	}
+	b = append(b, criuSteps...)
+
+	envSteps := []string{
+		// set instance-id, ec2 instances aren't self-aware (yet)
+		fmt.Sprintf("echo export CEDANA_JOB_ID=%s >> /home/%s/.bashrc", is.job.JobID, user),
+		fmt.Sprintf("echo export CEDANA_AUTH_TOKEN=%s >> /home/%s/.bashrc", is.cfg.Connection.AuthToken, user),
+		fmt.Sprintf("echo export CEDANA_CLIENT_ID=%s >> /home/%s/.bashrc", is.instance.CedanaID, user),
+		fmt.Sprintf("source /home/%s/.bashrc", user),
+	}
+	b = append(b, envSteps...)
+
+	// first-time config setup step
+	is.logger.Info().Msg("Building first time config...")
+	client_config := utils.BuildClientConfig(is.jobFile)
+	cc_marshaled, err := json.Marshal(client_config)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error marshalling json")
+	}
+	escapedJSON := strconv.Quote(string(cc_marshaled))
+
+	configSteps := []string{
+		fmt.Sprintf("mkdir -p /home/%s/.cedana/", user),
+		fmt.Sprintf("touch /home/%s/.cedana/server_overrides.json", user),
+		fmt.Sprintf("echo %s | tee /home/%s/.cedana/server_overrides.json", escapedJSON, user),
+	}
+	b = append(b, configSteps...)
+	return b
+}
+
+func (is *InstanceSetup) buildOrchestratorServerCommands(b *[]string, workerId string) {
+	systemctlEntry := fmt.Sprintf(`
+[Unit]
+Description=Cedana Orchestrator
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/cedana-orch server 
+Environment=CEDANA_JOB_ID=%s CEDANA_AUTH_TOKEN=%s CEDANA_CLIENT_ID=%s CEDANA_ORCH_ID=%s USER=ubuntu
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+`,
+		is.job.JobID,
+		is.cfg.Connection.AuthToken,
+		workerId,
+		is.instance.CedanaID,
+	)
+
+	// escape double quotes
+	systemctlEntry = strings.ReplaceAll(systemctlEntry, `"`, `\"`)
+
+	daemonStart := []string{
+		"curl -s https://packagecloud.io/install/repositories/nravic/cedana-orch/script.deb.sh | sudo bash",
+		"sudo apt-get --yes install cedana-orch",
+		fmt.Sprintf("sudo tee /etc/systemd/system/cedana-orchestrator.service > /dev/null << EOF\n%s\nEOF", systemctlEntry),
+		"sudo systemctl enable cedana-orchestrator.service",
+	}
+	*b = append(*b, daemonStart...)
+
+}
+
+func (is *InstanceSetup) startOrchServerCommand(b *[]string) {
+	daemonStart := []string{
+		"sudo systemctl start cedana-orchestrator.service &",
+	}
+	*b = append(*b, daemonStart...)
+}
+
+func (is *InstanceSetup) buildCedanaDaemonCommands(b *[]string, user string) {
+	// start daemon
+	// same thing here as below - something funky is going on with the way ssh deals with env vars.
+	// TODO NR: look into this
+	// sshing and running commands directly is finnicky.
+	// a less flakey solution is directly creating a systemctl service, although this has it's downsides too.
+	// going with that for now
+
+	// We set user to ubuntu to give the daemon access to the home folder (so it can load config)
+	// TODO NR - this fails immediately for some reason (config isn't set?) but succeeds after a retry.
+	// We also timeout immediately because the daemon is forking and we don't want it holding up the setup forever.
+	systemctlEntry := fmt.Sprintf(`
+[Unit]
+Description=Cedana Worker Daemon
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/cedana client daemon 
+Environment=CEDANA_JOB_ID=%s CEDANA_AUTH_TOKEN=%s CEDANA_CLIENT_ID=%s USER=%s
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+`, is.job.JobID, is.cfg.Connection.AuthToken, is.instance.CedanaID, user)
+
+	systemctlEntry = strings.ReplaceAll(systemctlEntry, `"`, `\"`)
+
+	daemonStart := []string{
+		// using a here-document because the multi-line file gets weird when echoing
+		// we also don't start the service because it hangs - TODO this is something to fix!
+		fmt.Sprintf("sudo tee /etc/systemd/system/cedana.service > /dev/null << EOF\n%s\nEOF", systemctlEntry),
+		"sudo systemctl enable cedana.service",
+	}
+	*b = append(*b, daemonStart...)
+}
+
+func (is *InstanceSetup) startCedanaDaemonCommand(b *[]string) {
+	daemonStart := []string{
+		"sudo systemctl start cedana.service &",
+	}
+	*b = append(*b, daemonStart...)
+}
+
+func (is *InstanceSetup) buildOrchSetupCommands(b *[]string, workerId string) {
+	authSteps := []string{
+		// should be written to a .bashrc or something
+		fmt.Sprintf("echo export CEDANA_AUTH_TOKEN=%s >> /home/ubuntu/.bashrc", is.cfg.Connection.AuthToken),
+		fmt.Sprintf("echo export CEDANA_CLIENT_ID=%s >> /home/ubuntu/.bashrc", workerId),
+		fmt.Sprintf("echo export CEDANA_ORCH_ID=%s >> /home/ubuntu/.bashrc", is.instance.CedanaID),
+		fmt.Sprintf("echo export CEDANA_JOB_ID=%s >> /home/ubuntu/.bashrc", is.job.JobID),
+		"source /home/ubuntu/.bashrc",
+	}
+	*b = append(*b, authSteps...)
+
+	orchConfig, err := json.Marshal(*is.cfg)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error marshalling json")
+	}
+	escapedJSON := strconv.Quote(string(orchConfig))
+	configSteps := []string{
+		"mkdir -p /home/ubuntu/.cedana/",
+		"touch /home/ubuntu/.cedana/cedana_config.json",
+		fmt.Sprintf("echo %s | tee /home/ubuntu/.cedana/cedana_config.json", escapedJSON),
+	}
+	*b = append(*b, configSteps...)
+}
+
+// Attaches user specified comments (specified as yaml) to a
+// list of startup commands. Have to happen post cedana-setup
+func (is *InstanceSetup) buildUserSetupCommands(b *[]string) {
+	cmds := is.jobFile.SetupCommands
+	// if we _did_ manage to populate it
+	if len(cmds.C) > 0 {
+		*b = append(*b, cmds.C...)
+	}
+}
+
+func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
+	task := is.jobFile.Task
+	// simple for now
+	if len(task.C) != 1 {
+		is.logger.Fatal().Msg("too many or too few tasks, please ensure only one command is specified")
+	} else {
+		// wrap command in setsid so it can be checkpointed
+		// TODO: this is very hacky
+		if workDir != "" {
+			*b = append(*b, fmt.Sprintf("cd %s && setsid %s < /dev/null &> test.log &", workDir, task.C[0]))
+		} else {
+			*b = append(*b, fmt.Sprintf("setsid %s < /dev/null &> test.log &", task.C[0]))
+		}
+	}
+}
+
+func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
+	// TODO NR: we really should be using this: https://github.com/bramvdbogaerde/go-scp
+	var keyPath string
+	var user string
+
+	if is.instance.Provider == "aws" {
+		user = is.cfg.AWSConfig.User
+		if user == "" {
+			user = "ubuntu"
+		}
+		keyPath = is.cfg.AWSConfig.SSHKeyPath
+	}
+
+	if is.instance.Provider == "paperspace" {
+		user = is.cfg.PaperspaceConfig.User
+		if user == "" {
+			user = "paperspace"
+		}
+		keyPath = is.cfg.PaperspaceConfig.SSHKeyPath
+	}
+
+	_, err := os.ReadFile(keyPath)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error loading keyfile to ssh into instance")
+		return err
+	}
+
+	// since this is first to execute, we want to attempt connections the same way
+	// we do in createConn
+	conn, err := is.CreateConn()
+	if err != nil {
+		return err
+	}
+	is.logger.Info().Msg("connection with remote instance established.")
+	conn.Close()
+
+	scpCmd := exec.Command(
+		"scp", "-r", "-i", keyPath,
+		"-o", "StrictHostKeyChecking=no", // another security hazard, also goes away
+		"-o", "IdentitiesOnly=yes", // security hazard, but goes away once we use a go solution
+		workDirPath,
+		fmt.Sprintf("%s@%s:%s", user, is.instance.IPAddress, "."),
+	)
+
+	scpCmd.Stdout = os.Stdout
+	scpCmd.Stderr = os.Stderr
+
+	err = scpCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	is.logger.Info().Msg("transferred work dir to remote instance.")
+
+	return nil
+}
+
+func (is *InstanceSetup) buildCredsPassthrough(b *[]string) {
+	// orchestrator needs creds passthrough in order to launch instances & check for revocations.
+	// this is potentially a security nightmare exclamation mark 1 exclamation mark 2
+
+	// instance launching also should be happening on another server ideally - our brokerage/exchange in the cloud
+	// good for now though.
+
+	// load configured providers and just grab those keys
+	for _, p := range is.cfg.EnabledProviders {
+		if p == "aws" {
+			// hardcoded lol
+			aws_access_key_id, exists := os.LookupEnv("AWS_ACCESS_KEY_ID")
+			if exists {
+				*b = append(*b, fmt.Sprintf("export AWS_ACCESS_KEY_ID=%s", aws_access_key_id))
+			}
+			aws_secret_access_key, exists := os.LookupEnv("AWS_SECRET_ACCESS_KEY")
+			if exists {
+				*b = append(*b, fmt.Sprintf("export AWS_SECRET_ACCESS_KEY=%s", aws_secret_access_key))
+			}
+		}
+		if p == "paperspace" {
+			*b = append(*b, fmt.Sprintf("export PAPERSPACE_API_KEY=%s", is.cfg.PaperspaceConfig.APIKey))
+		}
+	}
+	// aws - switching to env vars
+}
+
+func init() {
+	rootCmd.AddCommand(SetupCmd)
+	SetupCmd.Flags().BoolVar(&userOnly, "user", false, "run only user-specificed commands on remote instance")
+	SetupCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file to use for setup")
+	SetupCmd.Flags().StringVarP(&instanceId, "instance", "i", "", "provider instance id to setup")
+	cobra.MarkFlagRequired(SetupCmd.Flags(), "job")
+
+}
