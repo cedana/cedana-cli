@@ -11,6 +11,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/nats-io/nats.go v1.26.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/rs/xid v1.5.0
 	gorm.io/gorm v1.24.6
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 )
@@ -35,7 +36,6 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/glebarez/go-sqlite v1.21.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -58,13 +58,11 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/rs/xid v1.5.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.8.3 // indirect
 	github.com/subosito/gotenv v1.4.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
@@ -87,7 +85,6 @@ require (
 	github.com/manifoldco/promptui v0.9.0
 	github.com/rs/zerolog v1.28.0
 	github.com/sevlyar/go-daemon v0.1.6
-	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.23.5
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cedana/cedana-client/db"
+	cedana "github.com/cedana/cedana-client/types"
 	"github.com/cedana/cedana-client/utils"
-	"github.com/nravic/cedana-client/db"
-	cedana "github.com/nravic/cedana-client/types"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -164,47 +164,6 @@ func (is *InstanceSetup) execUserCommands() error {
 	err = is.execCommands(cmds, conn)
 	if err != nil {
 		is.logger.Fatal().Err(err).Msg("error executing commands")
-	}
-
-	return nil
-}
-
-// provision an instance to act as an orchestrator
-func (is *InstanceSetup) OrchSetup(workerID string) error {
-	is.logger.Info().Msg("Provisioning instance as a cedana orchestrator")
-	// JWT/auth stuff?
-	conn, err := is.CreateConn()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	// download and install cedana-orch
-	var setupCmds []string
-	is.buildOrchSetupCommands(&setupCmds, workerID)
-	is.buildCredsPassthrough(&setupCmds)
-	err = is.execCommands(setupCmds, conn)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error executing commands")
-		return err
-	}
-
-	// set up systemctl commands
-	var setupOrchDaemonCmds []string
-	is.buildOrchestratorServerCommands(&setupOrchDaemonCmds, workerID)
-	err = is.execCommands(setupOrchDaemonCmds, conn)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error executing commands")
-		return err
-	}
-
-	// start orchestrator (as async to avoid hanging)
-	var startOrchCmd []string
-	is.startOrchServerCommand(&startOrchCmd)
-	err = is.execCommandAsync(startOrchCmd, conn)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error executing commands")
-		return err
 	}
 
 	return nil
@@ -448,47 +407,6 @@ func (is *InstanceSetup) buildBaseCommands(user string) []string {
 	return b
 }
 
-func (is *InstanceSetup) buildOrchestratorServerCommands(b *[]string, workerId string) {
-	systemctlEntry := fmt.Sprintf(`
-[Unit]
-Description=Cedana Orchestrator
-After=network.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/cedana-orch server 
-Environment=CEDANA_JOB_ID=%s CEDANA_AUTH_TOKEN=%s CEDANA_CLIENT_ID=%s CEDANA_ORCH_ID=%s USER=ubuntu
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-`,
-		is.job.JobID,
-		is.cfg.Connection.AuthToken,
-		workerId,
-		is.instance.CedanaID,
-	)
-
-	// escape double quotes
-	systemctlEntry = strings.ReplaceAll(systemctlEntry, `"`, `\"`)
-
-	daemonStart := []string{
-		"curl -s https://packagecloud.io/install/repositories/nravic/cedana-orch/script.deb.sh | sudo bash",
-		"sudo apt-get --yes install cedana-orch",
-		fmt.Sprintf("sudo tee /etc/systemd/system/cedana-orchestrator.service > /dev/null << EOF\n%s\nEOF", systemctlEntry),
-		"sudo systemctl enable cedana-orchestrator.service",
-	}
-	*b = append(*b, daemonStart...)
-
-}
-
-func (is *InstanceSetup) startOrchServerCommand(b *[]string) {
-	daemonStart := []string{
-		"sudo systemctl start cedana-orchestrator.service &",
-	}
-	*b = append(*b, daemonStart...)
-}
-
 func (is *InstanceSetup) buildCedanaDaemonCommands(b *[]string, user string) {
 	// start daemon
 	// same thing here as below - something funky is going on with the way ssh deals with env vars.
@@ -531,30 +449,6 @@ func (is *InstanceSetup) startCedanaDaemonCommand(b *[]string) {
 		"sudo systemctl start cedana.service &",
 	}
 	*b = append(*b, daemonStart...)
-}
-
-func (is *InstanceSetup) buildOrchSetupCommands(b *[]string, workerId string) {
-	authSteps := []string{
-		// should be written to a .bashrc or something
-		fmt.Sprintf("echo export CEDANA_AUTH_TOKEN=%s >> /home/ubuntu/.bashrc", is.cfg.Connection.AuthToken),
-		fmt.Sprintf("echo export CEDANA_CLIENT_ID=%s >> /home/ubuntu/.bashrc", workerId),
-		fmt.Sprintf("echo export CEDANA_ORCH_ID=%s >> /home/ubuntu/.bashrc", is.instance.CedanaID),
-		fmt.Sprintf("echo export CEDANA_JOB_ID=%s >> /home/ubuntu/.bashrc", is.job.JobID),
-		"source /home/ubuntu/.bashrc",
-	}
-	*b = append(*b, authSteps...)
-
-	orchConfig, err := json.Marshal(*is.cfg)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error marshalling json")
-	}
-	escapedJSON := strconv.Quote(string(orchConfig))
-	configSteps := []string{
-		"mkdir -p /home/ubuntu/.cedana/",
-		"touch /home/ubuntu/.cedana/cedana_config.json",
-		fmt.Sprintf("echo %s | tee /home/ubuntu/.cedana/cedana_config.json", escapedJSON),
-	}
-	*b = append(*b, configSteps...)
 }
 
 // Attaches user specified comments (specified as yaml) to a
@@ -638,33 +532,6 @@ func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 	is.logger.Info().Msg("transferred work dir to remote instance.")
 
 	return nil
-}
-
-func (is *InstanceSetup) buildCredsPassthrough(b *[]string) {
-	// orchestrator needs creds passthrough in order to launch instances & check for revocations.
-	// this is potentially a security nightmare exclamation mark 1 exclamation mark 2
-
-	// instance launching also should be happening on another server ideally - our brokerage/exchange in the cloud
-	// good for now though.
-
-	// load configured providers and just grab those keys
-	for _, p := range is.cfg.EnabledProviders {
-		if p == "aws" {
-			// hardcoded lol
-			aws_access_key_id, exists := os.LookupEnv("AWS_ACCESS_KEY_ID")
-			if exists {
-				*b = append(*b, fmt.Sprintf("export AWS_ACCESS_KEY_ID=%s", aws_access_key_id))
-			}
-			aws_secret_access_key, exists := os.LookupEnv("AWS_SECRET_ACCESS_KEY")
-			if exists {
-				*b = append(*b, fmt.Sprintf("export AWS_SECRET_ACCESS_KEY=%s", aws_secret_access_key))
-			}
-		}
-		if p == "paperspace" {
-			*b = append(*b, fmt.Sprintf("export PAPERSPACE_API_KEY=%s", is.cfg.PaperspaceConfig.APIKey))
-		}
-	}
-	// aws - switching to env vars
 }
 
 func init() {
