@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	cedana "github.com/nravic/cedana-orch/types"
+	cedana "github.com/cedana/cedana-client/types"
 )
 
 var r2CatalogBucket string = "pub-e47371c3835348ea9fac25dba76439e0"

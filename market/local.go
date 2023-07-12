@@ -5,9 +5,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/nravic/cedana-orch/db"
-	cedana "github.com/nravic/cedana-orch/types"
-	"github.com/nravic/cedana-orch/utils"
+	"github.com/cedana/cedana-client/db"
+	cedana "github.com/cedana/cedana-client/types"
+	"github.com/cedana/cedana-client/utils"
 	"github.com/rs/zerolog"
 )
 

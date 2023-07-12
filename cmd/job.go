@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/nravic/cedana-orch/db"
+	"github.com/cedana/cedana-client/db"
 	"github.com/spf13/cobra"
 )
 

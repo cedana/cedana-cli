@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/nravic/cedana-orch/cmd"
+	"github.com/cedana/cedana-client/cmd"
 )
 
 var (

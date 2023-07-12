@@ -1,7 +1,5 @@
 cedana-orch
-*.log
-*.pid
 work_dir
-launched_instances.json
 dist/
 *.vhs
+caltech-*

@@ -10,18 +10,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cedana/cedana-client/db"
+	"github.com/cedana/cedana-client/market"
+	"github.com/cedana/cedana-client/types"
+	"github.com/cedana/cedana-client/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/nravic/cedana-orch/db"
-	"github.com/nravic/cedana-orch/market"
-	"github.com/nravic/cedana-orch/types"
-	"github.com/nravic/cedana-orch/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"k8s.io/utils/strings/slices"
 
-	cedana "github.com/nravic/cedana-orch/types"
+	cedana "github.com/cedana/cedana-client/types"
 )
 
 // call ./cedana-orch run dockerfile to:
@@ -98,17 +98,13 @@ var runCmd = &cobra.Command{
 
 		r.job = r.db.CreateJob(r.jobFile)
 
+		// TODO NR - expand later to bring in managed service
 		if r.cfg.SelfServe {
 			err = r.runJobSelfServe()
 			if err != nil {
 				return err
 			}
 			return nil
-		}
-
-		err = r.runJob()
-		if err != nil {
-			return err
 		}
 
 		return nil
@@ -249,31 +245,6 @@ var restoreCmd = &cobra.Command{
 
 		return nil
 	},
-}
-
-// TODO - redo flow, this is a big code-smell
-func (r *Runner) runJob() error {
-	candidates := market.Optimize(r.jobFile)
-	// set up NATS first
-	r.logger.Info().Msg("setting up job...")
-	r.job.State = types.JobStatePending
-	err := r.SetupNATSForJob()
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("could not set up inter-cloud broker architecture")
-	}
-
-	worker, err := r.deployWorker(candidates, true)
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("could not deploy worker")
-		return err
-	}
-
-	if err := r.deployOrchestrator(*worker); err != nil {
-		r.logger.Fatal().Err(err).Msg("could not deploy orchestrator")
-		return err
-	}
-
-	return nil
 }
 
 // restoreJob manually restores the most recent checkpoint onto a new instance
@@ -461,70 +432,6 @@ func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*ceda
 
 	r.db.UpdateJobState(r.job, types.JobStateRunning)
 	return optimalInstance, nil
-}
-
-func (r *Runner) deployOrchestrator(worker cedana.Instance) error {
-	// get cheapest instance to deploy orchestrator onto
-	// set up holy communion between orchestrator and worker
-	// call this a cluster in Cedana
-	r.logger.Info().Msgf("spinning up orchestrator...")
-	candidates := market.OptimizeOrchestrator()
-
-	var orchInstance *cedana.Instance
-	for _, candidate := range candidates {
-		provider := r.providers[candidate.Provider]
-		i, err := provider.CreateInstance(&candidate)
-		if err != nil {
-			// if we have a capacity related error - return and keep trying
-			if _, ok := err.(*cedana.CapacityError); ok {
-				r.logger.Warn().Msg("capacity error during instance creation - trying the next optimal instance")
-				continue
-			} else {
-				// other error - break
-				return err
-			}
-		}
-		if i != nil {
-			orchInstance = i
-			// break from for loop, we have our instance!
-			break
-		} else {
-			return errors.New("something went wrong during instance creation - nil instance returned from provider")
-		}
-	}
-
-	orchInstance.Tag = "orchestrator"
-
-	r.logger.Info().Msg("waiting for instance to be ready...")
-	for {
-		switch p := orchInstance.Provider; p {
-		case "aws":
-			aws := r.providers["aws"]
-			aws.DescribeInstance([]*cedana.Instance{orchInstance}, "")
-			time.Sleep(5 * time.Second)
-		case "paperspace":
-			paperspace := r.providers["paperspace"]
-			paperspace.DescribeInstance([]*cedana.Instance{orchInstance}, "")
-			time.Sleep(5 * time.Second)
-		}
-		if orchInstance.State == "running" {
-			break
-		}
-	}
-
-	r.db.AttachInstanceToJob(r.job, *orchInstance)
-
-	is := BuildInstanceSetup(*orchInstance, *r.job)
-	for i := 0; i < 5; i++ {
-		err := is.OrchSetup(worker.CedanaID)
-		if err == nil {
-			break
-		}
-		r.logger.Warn().Msgf("orchestrator setup failed (attempt %d/%d) with error: %v. Retrying...", i+1, 5, err)
-		time.Sleep(40 * time.Second)
-	}
-
-	return nil
 }
 
 func (r *Runner) SetupNATSForJob() error {

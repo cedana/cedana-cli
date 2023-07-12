@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cedana/cedana-client/types"
+	"github.com/cedana/cedana-client/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/nravic/cedana-orch/types"
-	"github.com/nravic/cedana-orch/utils"
 	"github.com/rs/zerolog"
 )
 

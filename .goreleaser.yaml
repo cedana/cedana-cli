@@ -25,7 +25,7 @@ changelog:
 nfpms:
   - 
     id: default
-    package_name: cedana-orch
+    package_name: cedana-client
     file_name_template: "{{ .ConventionalFileName }}"
     vendor: Cedana Systems
 

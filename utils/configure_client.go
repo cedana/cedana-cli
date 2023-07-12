@@ -1,7 +1,7 @@
 package utils
 
 import (
-	cedana "github.com/nravic/cedana-orch/types"
+	cedana "github.com/cedana/cedana-client/types"
 )
 
 type ConfigClient struct {
