@@ -52,4 +52,4 @@ brews:
       email: nravic@cedana.ai
     tap: 
       owner: cedana 
-      name: homebrew-cedana-client 
+      name: homebrew-cedana-cli 
