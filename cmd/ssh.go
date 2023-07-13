@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/cedana/cedana-cli/db"
@@ -11,7 +10,7 @@ import (
 
 var sshCommand = &cobra.Command{
 	Use:   "ssh",
-	Short: "SSH into instance",
+	Short: "SSH into instance using [cedana-id]",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]
@@ -23,11 +22,10 @@ var sshCommand = &cobra.Command{
 			logger.Fatal().Err(err).Msgf("could not set up config!")
 		}
 
-		inst := db.GetInstanceByProviderId(id)
-		if inst == nil {
-			return errors.New("could not find instance with provided id")
+		inst := db.GetInstanceByCedanaID(id)
+		if inst.CedanaID == "" {
+			logger.Fatal().Msgf("could not find instance with id %s", id)
 		}
-
 		ipaddr := inst.IPAddress
 		var sshKey string
 		var user string
