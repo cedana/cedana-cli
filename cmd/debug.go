@@ -49,23 +49,6 @@ var envCmd = &cobra.Command{
 	},
 }
 
-var buildConfigCmd = &cobra.Command{
-	Use:   "build client config",
-	Short: "Command for directly building server overrides",
-	RunE: func(cmd *cobra.Command, args []string) error {
-
-		client_config := utils.BuildClientConfig(nil)
-		cc_marshaled, _ := json.Marshal(client_config)
-
-		err := os.WriteFile("/home/nravichandra/.cedana/server_overrides.json", cc_marshaled, 0o644)
-		if err != nil {
-			return fmt.Errorf("could not marshal overrides %v", err)
-		}
-
-		return nil
-	},
-}
-
 var parseAndUploadToR2Cmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Workaround for directly uploading provider catalogs to R2",
@@ -141,7 +124,6 @@ var unzipCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(debugCmd)
-	debugCmd.AddCommand(buildConfigCmd)
 	debugCmd.AddCommand(parseAndUploadToR2Cmd)
 	debugCmd.AddCommand(generateCatalogCmd)
 	debugCmd.AddCommand(downloadCatalogCmd)

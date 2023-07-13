@@ -425,7 +425,7 @@ func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*ceda
 	err := is.ClientSetup(runTask)
 
 	if err != nil {
-		r.logger.Info().Msgf("could not set up client, retry using `./cedana-orch setup -i %s -j %s`", optimalInstance.AllocatedID, "yourjob.yml")
+		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", optimalInstance.AllocatedID, "yourjob.yml")
 		r.db.UpdateJobState(r.job, types.JobStateSetupFailed)
 		return nil, err
 	}
@@ -620,8 +620,6 @@ func prettyPrintInstances(instances []cedana.Instance) {
 		table.SetHeader([]string{
 			"Cedana ID",
 			"Provider",
-			"Allocated ID",
-			"Accelerator Name",
 			"VCPUs",
 			"RAM (GB)",
 			"GPU",
@@ -636,8 +634,6 @@ func prettyPrintInstances(instances []cedana.Instance) {
 		table.Append([]string{
 			fmt.Sprint(it.CedanaID),
 			it.Provider,
-			it.AllocatedID,
-			it.AcceleratorName,
 			strconv.FormatFloat(it.VCPUs, 'f', -1, 64),
 			strconv.FormatFloat(it.MemoryGiB, 'f', -1, 64),
 			fmt.Sprintf("%s %s", manufacturer, gpuName),

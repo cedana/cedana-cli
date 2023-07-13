@@ -139,7 +139,7 @@ func (cd *CLIDaemon) Start(orchestratorID string, jobID string, clientID string)
 		WorkDir:     "./",
 		// always pass ids as flags to avoid checking env on local machine
 		Args: []string{
-			"cedana-orch", "daemon",
+			"cedana-cli", "daemon",
 			"-o", orchestratorID,
 			"-j", jobID,
 			"-c", clientID,
