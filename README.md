@@ -8,10 +8,16 @@ This repo is a self serve CLI tool to allow developers to experiment with our sy
 - Leverage our client code (installed on every launched instance) to checkpoint/restore across instances, unlocking reliability, increased performance gains and decreased price.
 - Deploy any kind of job, whether a pyTorch training job or a webservice.
 
-## Usage 
 
+## Usage 
+Cedana consists of the client code running on compute in the cloud (or anywhere else) (found [here](https://github.com/nravic/cedana)) and the orchestration/daemon, which runs on your local machine. 
 
 ## Demo
+
 https://github.com/cedana/cedana-cli/assets/409327/c5d06ca6-c200-4838-b2f0-6e780a49c7d4
 
 (Note: The video is sped up for brevity to show how a CPU-bound PyTorch training job can be paused/migrated/resumed). 
+
+## Contributing
+
+See CONTRIBUTING.md for guidelines. 
