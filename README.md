@@ -26,7 +26,7 @@ You can view the official documentation [here](cedana.rtfd.io).
 
 ## Demo
 
-https://github.com/cedana/cedana-cli/assets/409327/c5d06ca6-c200-4838-b2f0-6e780a49c7d4
+https://www.youtube.com/watch?v=KC4STzSQ_DU
 
 (Note: The video is sped up for brevity to show how a CPU-bound PyTorch training job can be paused/migrated/resumed). 
 
