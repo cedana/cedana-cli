@@ -9,8 +9,19 @@ This repo is a self serve CLI tool to allow developers to experiment with our sy
 - Deploy and manage any kind of job, whether a pyTorch training job, a webservice or a multibody physics simulation.
 
 
-## Usage 
-Cedana consists of the client code running on compute in the cloud (or anywhere else) (found [here](https://github.com/nravic/cedana)) and the orchestration/daemon, which runs on your local machine. 
+## Usage
+Cedana consists of the client code (found [here](https://github.com/nravic/cedana)) running on compute in the cloud (or anywhere else) and the orchestration/daemon, which runs on your local machine. 
+
+To build from source: 
+`go build`
+
+To run: 
+`./cedana-cli`
+
+If you prefer to install from a package manager, we push to packagecloud and have a homebrew tap. Check out the documentation for instructions.
+
+## Documentation
+You can view the official documentation here. 
 
 ## Demo
 
