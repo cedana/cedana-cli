@@ -19,10 +19,10 @@ To build from source:
 To run: 
 `./cedana-cli`
 
-If you prefer to install from a package manager, we push to packagecloud and have a homebrew tap. Check out the [documentation](cedna.rtfd.io) for instructions. 
+If you prefer to install from a package manager, we push to packagecloud and have a homebrew tap. Check out the [documentation](https://cedna.rtfd.io) for instructions. 
 
 ## Documentation
-You can view the official documentation [here](cedana.rtfd.io). 
+You can view the official documentation [here](https://cedana.readthedocs.io). 
 
 ## Demo
 
