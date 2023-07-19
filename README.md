@@ -28,7 +28,7 @@ You can view the official documentation [here](https://cedana.readthedocs.io).
 
 https://www.youtube.com/watch?v=KC4STzSQ_DU
 
-(Note: The video is sped up for brevity to show how a CPU-bound PyTorch training job can be paused/migrated/resumed). 
+(Note: The video is sped up for brevity to show how a CPU-bound PyTorch training job can be migrated between instances in realtime). 
 
 
 ## Todos 
