@@ -42,6 +42,7 @@ We're working on building out a public roadmap. Until then, here's a few of the 
 - Simulation environment for rapid checkpoint/migrate 
 - Kubernetes and cluster formation support
 - Batch compute paradigms
+- SLURM feature parity
 
 For checkpoint/restore specific work, refer to the README in the client code repo.
 
