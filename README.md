@@ -1,6 +1,6 @@
 # cedana-cli
 
-Cedana is a framework for the democritization and (eventually) commodification of compute. We achieve this by leveraging checkpoint/restore to seamlessly migrate work across machines, clouds and beyond.
+[Cedana](https://cedana.ai) is a framework for the democritization and (eventually) commodification of compute. We achieve this by leveraging checkpoint/restore to seamlessly migrate work across machines, clouds and beyond.
 
 This repo contains a self serve CLI tool to allow developers to experiment with our system. With it, you can:
 
