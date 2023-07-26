@@ -2,6 +2,7 @@ package market
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -177,9 +178,8 @@ func (s *Spot) Name() string {
 func (s *Spot) spotSetup(i *cedana.Instance) error {
 	// launch template check
 	valid := s.isValidLaunchTemplateName(s.Cfg.AWSConfig.LaunchTemplateName)
-	// TODO NR: Nothing is happening here w/ launch templates
 	if !valid {
-		s.Logger.Info().Msg("launch template does not exist in set region, creating...")
+		return fmt.Errorf("invalid launch template name: %s", s.Cfg.AWSConfig.LaunchTemplateName)
 	}
 	s.LaunchParams = &ec2.CreateFleetInput{
 		// launch template config is stupid and annoying, but the overriding the override param
