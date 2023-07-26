@@ -69,7 +69,7 @@ func (b *Bootstrap) createConfig() error {
 	if errors.Is(err, os.ErrNotExist) {
 		b.l.Info().Msg("cedana_config.json does not exist, creating template")
 		// copy template, use viper to set programatically
-		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"), []string{""})
+		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"))
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("could not create cedana_config")
 		}
@@ -144,15 +144,18 @@ func (b *Bootstrap) AWSBootstrap() {
 
 	// .aws/credentials check
 	// can't proceed w/ invalid creds
+	b.l.Info().Msg("checking for local aws credentials in env and ~/.aws/credentials..")
 	_, err = market.MakeClient(aws.String("us-east-1"), b.ctx)
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("Could not find credentials in env vars or shared configuration folder. Follow instructions here to set them up for your AWS account: https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html ")
 	}
+	b.l.Info().Msg("aws credentials found!")
 
 	// check and set key file for ssh access.
 	b.l.Info().Msg("checking for .pem key file for ssh access to instances...")
 	// keep going if aws key is set in config
 	if len(b.c.AWSConfig.SSHKeyPath) == 0 {
+		b.l.Info().Msg("no key file found in config!")
 		b.promptAWSKey()
 	}
 	// check valid regions too
