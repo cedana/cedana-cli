@@ -35,6 +35,6 @@ jobs:
         uses: docker://lpenz/ghaction-packagecloud:0.4
         with: 
           user: nravic
-          repository: "cedana-client/ubuntu/jammy"
+          repository: "cedana-cli/ubuntu/jammy"
         env:
           PACKAGECLOUD_TOKEN: ${{ secrets.PACKAGECLOUD_TOKEN }}
