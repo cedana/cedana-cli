@@ -41,8 +41,6 @@ var bootstrapCmd = &cobra.Command{
 			logger.Fatal().Err(err).Msg("could not assign providers in config")
 		}
 
-		b.AWSBootstrap()
-
 		return nil
 	},
 }
@@ -70,17 +68,8 @@ func (b *Bootstrap) createConfig() error {
 	_, err = os.OpenFile(filepath.Join(homeDir, "/.cedana/cedana_config.json"), 0, 0o644)
 	if errors.Is(err, os.ErrNotExist) {
 		b.l.Info().Msg("cedana_config.json does not exist, creating template")
-		prompt := promptui.Prompt{
-			Label: "Enter comma-separated aws regions you would like cedana to operate with",
-		}
-		result, err := prompt.Run()
-		regions := strings.Split(result, ",")
-		if err != nil {
-			b.l.Fatal().Err(err).Msg("error reading prompt input")
-		}
-
 		// copy template, use viper to set programatically
-		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"), regions)
+		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"), []string{""})
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("could not create cedana_config")
 		}
@@ -106,12 +95,25 @@ func (b *Bootstrap) getProviders() error {
 	for _, i := range selected {
 		providers = append(providers, i.ID)
 	}
+
+	_, err = utils.InitCedanaConfig()
+	if err != nil {
+		b.l.Fatal().Err(err).Msg("error initializing config")
+	}
+
 	viper.Set("enabled_providers", providers)
 	err = viper.WriteConfig()
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error writing config")
 		return err
 	}
+
+	for _, provider := range providers {
+		if provider == "aws" {
+			b.AWSBootstrap()
+		}
+	}
+
 	return nil
 }
 
@@ -119,7 +121,7 @@ func (b *Bootstrap) getProviders() error {
 func (b *Bootstrap) AWSBootstrap() {
 	c, err := utils.InitCedanaConfig()
 	if err != nil {
-		b.l.Fatal().Err(err).Msg("error initializing spot config")
+		b.l.Fatal().Err(err).Msg("error initializing config")
 	}
 	b.c = c
 	// check that the regions are set
@@ -138,7 +140,6 @@ func (b *Bootstrap) AWSBootstrap() {
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("error writing config")
 		}
-
 	}
 
 	// .aws/credentials check
@@ -158,8 +159,13 @@ func (b *Bootstrap) AWSBootstrap() {
 }
 
 func (b *Bootstrap) promptAWSKey() {
+	_, err := utils.InitCedanaConfig()
+	if err != nil {
+		b.l.Fatal().Err(err).Msg("error initializing config")
+	}
+
 	prompt := promptui.Select{
-		Label: "Do you have a valid key file for ec2 instance ssh access for all regions? [Y/n]",
+		Label: "Do you have a valid key file for ec2 instance ssh access? [Y/n]",
 		Items: []string{"Y", "n"},
 	}
 
@@ -181,7 +187,7 @@ func (b *Bootstrap) promptAWSKey() {
 		viper.Set("aws_key_path", r)
 		err = viper.WriteConfig()
 		if err != nil {
-			b.l.Fatal().Err(err).Msg("could not write spot config to file")
+			b.l.Fatal().Err(err).Msg("could not write cedana config to file")
 		}
 		b.l.Info().Msg("wrote key path to config")
 	}
@@ -217,8 +223,6 @@ func (b *Bootstrap) AzureBootstrap() {
 }
 
 func (b *Bootstrap) CreateAWSKeyFile(region string) {
-	// interesting find - aws key files are created per instance
-	// should add that to the prompt?
 	client, err := market.MakeClient(aws.String(region), b.ctx)
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error creating aws client")
@@ -243,7 +247,7 @@ func (b *Bootstrap) CreateAWSKeyFile(region string) {
 	viper.Set("aws_key_path", keyPath)
 	err = viper.WriteConfig()
 	if err != nil {
-		b.l.Fatal().Err(err).Msg("could not write keyfile path to spot config")
+		b.l.Fatal().Err(err).Msg("could not write keyfile path to config")
 	}
 
 }
