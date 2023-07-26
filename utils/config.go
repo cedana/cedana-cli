@@ -128,11 +128,10 @@ func isEnabledProvidersValid(config CedanaConfig) error {
 }
 
 // Used in bootstrap to create a placeholder config
-func CreateCedanaConfig(path string, regions []string) error {
+func CreateCedanaConfig(path string) error {
 	sc := &CedanaConfig{
 		AWSConfig: AWSConfig{
-			EnabledRegions:     regions,
-			SSHKeyPath:         "~/home/path-to-aws-key",
+			SSHKeyPath:         "",
 			LaunchTemplateName: "foo",
 		},
 		Connection: Connection{

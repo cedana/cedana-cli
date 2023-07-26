@@ -24,14 +24,6 @@ import (
 	cedana "github.com/cedana/cedana-cli/types"
 )
 
-// call ./cedana-orch run dockerfile to:
-// launch a spot instance (for now, cluster later) according to specs
-// attach and run dockerfile to said instance
-
-// will need to eventually plug into a customer's build system for dockerfiles?
-// OK with just accepting a link to the registry for now.
-
-// the batch command launches 100 of these in parallel!
 type Runner struct {
 	ctx       context.Context
 	cfg       *utils.CedanaConfig

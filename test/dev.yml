@@ -1,0 +1,13 @@
+instance_specs:
+    max_price_usd_hour: 0.2
+
+setup:
+    run:
+    - "sudo apt-get update && sudo apt-get install -y git curl"
+    - "git clone https://github.com/cedana/cedana.git"
+    - "cd cedana && git checkout feat/docker-support"
+    - "curl -fsSL https://code-server.dev/install.sh | sh"
+
+task:
+    run:
+    - "code-server --bind-addr 0.0.0.0:8080 --auth none &"

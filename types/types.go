@@ -38,7 +38,8 @@ type Commands struct {
 // should be yaml spec
 type JobFile struct {
 	JobFilePath       string            `mapstructure:"job_file_path"`
-	WorkDir           string            `mapstructure:"work_dir"` // TODO NR - should be s3 syncable?
+	WorkDir           string            `mapstructure:"work_dir"` // TODO NR - data storage abstractions
+	Containerized     bool              `mapstructure:"containerized"`
 	UserInstanceSpecs UserInstanceSpecs `mapstructure:"instance_specs"`
 	SetupCommands     Commands          `mapstructure:"setup"`
 	Task              Commands          `mapstructure:"task"`

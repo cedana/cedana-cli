@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var tunnel string
+
 var sshCommand = &cobra.Command{
 	Use:   "ssh",
 	Short: "SSH into instance using [cedana-id]",
@@ -45,16 +47,25 @@ var sshCommand = &cobra.Command{
 			}
 		}
 
-		fmt.Printf("`ssh -o \"IdentitiesOnly=yes\" -i %s %s@%s`\n",
-			sshKey,
-			user,
-			ipaddr,
-		)
-
+		if tunnel != "" {
+			fmt.Printf("ssh -o \"IdentitiesOnly=yes\" -i %s -L %s %s@%s\n",
+				sshKey,
+				tunnel,
+				user,
+				ipaddr,
+			)
+		} else {
+			fmt.Printf("`ssh -o \"IdentitiesOnly=yes\" -i %s %s@%s`\n",
+				sshKey,
+				user,
+				ipaddr,
+			)
+		}
 		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(sshCommand)
+	sshCommand.Flags().StringVarP(&tunnel, "tunnel", "t", "", "tunnel FROM:TO (e.g 8080:localhost:4999)")
 }
