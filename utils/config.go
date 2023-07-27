@@ -134,7 +134,7 @@ func CreateCedanaConfig(path string) error {
 			SSHKeyPath:              "",
 			LaunchTemplateName:      "",
 			ImageId:                 "",
-			EnabledInstanceFamilies: []string{},
+			EnabledInstanceFamilies: []string{"t2"}, // basic instance family
 			EnabledRegions:          []string{},
 		},
 		Connection: Connection{
