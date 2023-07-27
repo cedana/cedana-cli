@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/cedana/cedana-cli/market"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/manifoldco/promptui"
@@ -47,7 +48,6 @@ var bootstrapCmd = &cobra.Command{
 
 type Bootstrap struct {
 	l   *zerolog.Logger
-	c   *utils.CedanaConfig
 	ctx context.Context
 }
 
@@ -117,15 +117,15 @@ func (b *Bootstrap) getProviders() error {
 	return nil
 }
 
-// TODO: Should check for launch templates?
+// we should really be setting by just overwriting the config?
 func (b *Bootstrap) AWSBootstrap() {
 	c, err := utils.InitCedanaConfig()
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error initializing config")
 	}
-	b.c = c
+
 	// check that the regions are set
-	if len(b.c.AWSConfig.EnabledRegions) == 0 {
+	if len(c.AWSConfig.EnabledRegions) == 0 {
 		b.l.Info().Msg("No regions declared in config!")
 		prompt := promptui.Prompt{
 			Label: "Enter comma-separated aws regions you would like cedana to operate with",
@@ -135,7 +135,7 @@ func (b *Bootstrap) AWSBootstrap() {
 			b.l.Fatal().Err(err).Msg("error reading prompt input")
 		}
 		regions := strings.Split(result, ",")
-		viper.Set("available_regions", regions)
+		viper.Set("aws.enabled_regions", regions)
 		err = viper.WriteConfig()
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("error writing config")
@@ -154,15 +154,49 @@ func (b *Bootstrap) AWSBootstrap() {
 	// check and set key file for ssh access.
 	b.l.Info().Msg("checking for .pem key file for ssh access to instances...")
 	// keep going if aws key is set in config
-	if len(b.c.AWSConfig.SSHKeyPath) == 0 {
+	var keyName string
+	if c.AWSConfig.SSHKeyPath == "" {
 		b.l.Info().Msg("no key file found in config!")
-		b.promptAWSKey()
+		keyName = b.promptAWSKey()
 	}
-	// check valid regions too
+
+	// check for launch template
+	b.l.Info().Msg("checking for valid launch template...")
+	if c.AWSConfig.LaunchTemplateName == "" {
+		b.l.Info().Msg("Launch template not found, creating...")
+		b.promptLaunchTemplateCreation(keyName)
+	}
 }
 
-func (b *Bootstrap) promptAWSKey() {
-	_, err := utils.InitCedanaConfig()
+func (b *Bootstrap) promptLaunchTemplateCreation(keyName string) {
+	c, err := utils.InitCedanaConfig()
+	if err != nil {
+		b.l.Fatal().Err(err).Msg("error initializing config")
+	}
+	prompt := promptui.Select{
+		Label: "Do you want to create Cedana launch templates for all configured regions? [Y/n]",
+		Items: []string{"Y", "n"},
+	}
+
+	_, result, err := prompt.Run()
+	if err != nil {
+		b.l.Fatal().Err(err).Msg("error reading prompt")
+	}
+
+	if result == "Y" {
+		// get regions
+		if keyName != "" {
+			regions := c.AWSConfig.EnabledRegions
+			b.createLaunchTemplates(regions, keyName)
+		} else {
+			b.l.Fatal().Msg("invalid keyname found in config")
+		}
+	}
+}
+
+func (b *Bootstrap) promptAWSKey() string {
+	var keyName string
+	c, err := utils.InitCedanaConfig()
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error initializing config")
 	}
@@ -187,34 +221,41 @@ func (b *Bootstrap) promptAWSKey() {
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("error reading prompt")
 		}
-		viper.Set("aws_key_path", r)
+		viper.Set("aws.ssh_key_path", r)
 		err = viper.WriteConfig()
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("could not write cedana config to file")
 		}
 		b.l.Info().Msg("wrote key path to config")
+
+		// get keyName from key path
+		base := filepath.Base(r)
+		keyName = base[0 : len(base)-len(filepath.Ext(r))]
+		return keyName
 	}
 	if result == "n" {
 		prompt := promptui.Select{
 			Label: "create one from credentials? [Y/n]",
 			Items: []string{"Y", "n"},
 		}
-		_, r, err := prompt.Run()
+		_, result, err := prompt.Run()
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("error reading prompt")
 		}
-		if r == "Y" {
-			b.l.Info().Msgf("creating keys for all avzones specified in config")
-			for _, r := range b.c.AWSConfig.EnabledRegions {
-				b.l.Info().Msgf("creating key for region %s", r)
-				b.CreateAWSKeyFile(r)
+		if result == "Y" {
+			b.l.Info().Msgf("creating keys for all regions specified in config")
+			for _, region := range c.AWSConfig.EnabledRegions {
+				b.l.Info().Msgf("creating key for region %s", region)
+				keyName = b.CreateAWSKeyFile(region)
+				return keyName
 			}
 		}
-		if r == "n" {
+		if result == "n" {
 			b.l.Info().Msg("follow these instructions to create your own keyfile: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html")
 		}
 	}
 
+	return ""
 }
 
 func (b *Bootstrap) GCPBootstrap() {
@@ -225,7 +266,8 @@ func (b *Bootstrap) AzureBootstrap() {
 
 }
 
-func (b *Bootstrap) CreateAWSKeyFile(region string) {
+func (b *Bootstrap) CreateAWSKeyFile(region string) string {
+	keyName := "cedana-ssh"
 	client, err := market.MakeClient(aws.String(region), b.ctx)
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error creating aws client")
@@ -233,26 +275,27 @@ func (b *Bootstrap) CreateAWSKeyFile(region string) {
 	// TODO: should check for existing key w/ this string and bubble up an error if it exists.
 	// Also add a delete key function
 	out, err := client.CreateKeyPair(b.ctx, &ec2.CreateKeyPairInput{
-		KeyName: aws.String("cedana-key-new"),
+		KeyName: aws.String(keyName),
 	})
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error creating key file")
 	}
 
 	// save key to .cedana
-	keyPath := filepath.Join(os.Getenv("HOME"), ".cedana", "cedana.pem")
+	keyPath := filepath.Join(os.Getenv("HOME"), ".cedana", strings.Join([]string{keyName, "pem"}, "."))
 	err = os.WriteFile(keyPath, []byte(*out.KeyMaterial), 0600)
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error writing keyfile to disk")
 	}
 
 	// write to config file
-	viper.Set("aws_key_path", keyPath)
+	viper.Set("aws.ssh_key_path", keyPath)
 	err = viper.WriteConfig()
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("could not write keyfile path to config")
 	}
 
+	return keyName
 }
 
 type item struct {
@@ -316,6 +359,96 @@ func selectItems(selectedPos int, allItems []*item) ([]*item, error) {
 		}
 	}
 	return selectedItems, nil
+}
+
+// creates a launch template in the user account in set of given regions
+// assume key is passed around (for now!)
+// with authentication and user support, we should be able to centralize some of this logic
+func (b *Bootstrap) createLaunchTemplates(regions []string, keyName string) error {
+	for _, region := range regions {
+		client, err := market.MakeClient(aws.String(region), b.ctx)
+		if err != nil {
+			return err
+		}
+
+		// check if a security group w/ name "cedana" exists
+		describeSecurityGroupOut, err := client.DescribeSecurityGroups(b.ctx, &ec2.DescribeSecurityGroupsInput{
+			Filters: []types.Filter{
+				{
+					Name:   aws.String("group-name"),
+					Values: []string{"cedana"},
+				},
+			},
+		})
+
+		if err != nil {
+			b.l.Fatal().Err(err).Msg("error describing security group")
+			return err
+		}
+
+		var sgID string
+		// create security group if we couldn't find a cedana one
+		if len(describeSecurityGroupOut.SecurityGroups) == 0 {
+			// create a security group indiscriminately for ssh access
+			out, err := client.CreateSecurityGroup(b.ctx, &ec2.CreateSecurityGroupInput{
+				Description: aws.String("cedana security group for SSH access"),
+				GroupName:   aws.String("cedana"),
+			})
+			if err != nil {
+				b.l.Fatal().Err(err).Msg("error creating security group")
+				return err
+			}
+			b.l.Info().Msgf("created security group %s", *out.GroupId)
+			sgID := *out.GroupId
+
+			// authorize ingress
+			_, err = client.AuthorizeSecurityGroupIngress(b.ctx, &ec2.AuthorizeSecurityGroupIngressInput{
+				GroupId:    aws.String(sgID),
+				IpProtocol: aws.String("tcp"),
+				FromPort:   aws.Int32(22),
+				ToPort:     aws.Int32(22),
+				CidrIp:     aws.String("0.0.0.0/0"),
+			})
+
+			if err != nil {
+				b.l.Fatal().Err(err).Msg("error creating ssh rules for security group")
+				return err
+			}
+		} else {
+			sgID = *describeSecurityGroupOut.SecurityGroups[0].GroupId
+		}
+
+		// create launch template
+		output, err := client.CreateLaunchTemplate(b.ctx, &ec2.CreateLaunchTemplateInput{
+			LaunchTemplateName: aws.String("cedana-base"),
+			LaunchTemplateData: &types.RequestLaunchTemplateData{
+				KeyName: aws.String(keyName),
+				SecurityGroupIds: []string{
+					sgID,
+				},
+			},
+		})
+
+		if err != nil {
+			b.l.Fatal().Err(err).Msg("error creating launch template")
+			return err
+		}
+		b.l.Info().Msgf("created launch template %s", *output.LaunchTemplate.LaunchTemplateId)
+	}
+
+	// write launch template name to config
+	_, err := utils.InitCedanaConfig()
+	if err != nil {
+		return err
+	}
+
+	viper.Set("aws.launch_template_name", "cedana-base")
+	err = viper.WriteConfig()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func init() {

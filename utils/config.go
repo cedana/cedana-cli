@@ -99,7 +99,7 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 	var config CedanaConfig
 	err = viper.ReadInConfig()
 	if err != nil {
-		panic("fatal error loading config file. Make sure that config exists in $HOME/.cedana/cedana_config.json .")
+		panic("error loading config file. Make sure that config exists in $HOME/.cedana/cedana_config.json and that it's formatted correctly!")
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
@@ -131,8 +131,11 @@ func isEnabledProvidersValid(config CedanaConfig) error {
 func CreateCedanaConfig(path string) error {
 	sc := &CedanaConfig{
 		AWSConfig: AWSConfig{
-			SSHKeyPath:         "",
-			LaunchTemplateName: "foo",
+			SSHKeyPath:              "",
+			LaunchTemplateName:      "",
+			ImageId:                 "",
+			EnabledInstanceFamilies: []string{"t2"}, // basic instance family
+			EnabledRegions:          []string{},
 		},
 		Connection: Connection{
 			NATSUrl:  "demo.nats.io",
