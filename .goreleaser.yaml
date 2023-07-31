@@ -3,11 +3,11 @@ before:
     - go mod tidy
     - go generate ./...
 builds:
-    env:
+    - env:
       - CGO_ENABLED=0
-    goarch: 
+      goarch: 
       - amd64
-    goos:
+      goos:
       - linux
       - darwin
 checksum:
@@ -23,7 +23,7 @@ changelog:
 nfpms:
   - 
     id: default
-    package_name: cedana-cli
+    package_name: cedana-client
     file_name_template: "{{ .ConventionalFileName }}"
     vendor: Cedana Systems
 
