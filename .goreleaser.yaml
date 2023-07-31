@@ -23,7 +23,7 @@ changelog:
 nfpms:
   - 
     id: default
-    package_name: cedana-client
+    package_name: cedana-cli
     file_name_template: "{{ .ConventionalFileName }}"
     vendor: Cedana Systems
 
