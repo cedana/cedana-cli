@@ -4,9 +4,10 @@ before:
     - go generate ./...
 builds:
   - ldflags:
-      - -X "main.version=$(git describe --tags --abbrev=0)"
+      - -X "main.version={{ .env.VERSION }}"
     env:
       - CGO_ENABLED=0
+      - VERSION=$(git describe --tags --abbrev=0)
     goarch: 
       - amd64
     goos:
@@ -25,7 +26,7 @@ changelog:
 nfpms:
   - 
     id: default
-    package_name: cedana-client
+    package_name: cedana-cli
     file_name_template: "{{ .ConventionalFileName }}"
     vendor: Cedana Systems
 
