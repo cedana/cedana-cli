@@ -3,11 +3,8 @@ before:
     - go mod tidy
     - go generate ./...
 builds:
-  - ldflags:
-      - -X "main.version={{ .env.VERSION }}"
     env:
       - CGO_ENABLED=0
-      - VERSION=$(git describe --tags --abbrev=0)
     goarch: 
       - amd64
     goos:
