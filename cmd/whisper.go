@@ -18,26 +18,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// These flags need to be cleaned up, they're ugly
 var jobID string
 var debug bool
 var restoreFromLatest bool
 var path string
 var checkpointType string
 
-var communeCmd = &cobra.Command{
-	Use:   "commune",
-	Short: "Commune with the orchestrator or client by listening or publishing over NATS",
+var whisperCmd = &cobra.Command{
+	Use:   "whisper",
+	Short: "(gently) send manual checkpoint/restore commands over the stream for a job",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("please specify a subcommand")
 	},
 }
 
-type Commune struct {
+type Whisperer struct {
 	nc   *nats.Conn
 	orch *server.CedanaOrchestrator
 }
 
-func NewCommune(jobID string) (*Commune, error) {
+func NewWhisperer(jobID string) (*Whisperer, error) {
 	logger := utils.GetLogger()
 	cfg, err := utils.InitCedanaConfig()
 	if err != nil {
@@ -76,21 +77,21 @@ func NewCommune(jobID string) (*Commune, error) {
 
 	hostname := os.Getenv("HOSTNAME")
 	orch := server.NewOrchestrator(
-		fmt.Sprintf("cli-commune-%s", hostname),
+		fmt.Sprintf("cli-whisperer-%s", hostname),
 		jobID,
 		workerID,
 		nc,
 		&logger,
 	)
 
-	return &Commune{
+	return &Whisperer{
 		nc:   nc,
 		orch: orch,
 	}, nil
 
 }
 
-func (c *Commune) cleanup() {
+func (c *Whisperer) cleanup() {
 	c.nc.Close()
 }
 
@@ -102,31 +103,34 @@ var checkpointCmd = &cobra.Command{
 			return fmt.Errorf("job-id is required")
 		}
 
-		c, err := NewCommune(jobID)
+		w, err := NewWhisperer(jobID)
 		if err != nil {
 			return err
 		}
 
-		c.sendCheckpointCommand(jobID)
+		w.sendCheckpointCommand(jobID)
 
 		return nil
 	},
 }
 
-var communeRestoreCmd = &cobra.Command{
+// Differs from the restoreCmd in run.go by only restoring onto an existing instance.
+// Only really useful for debugging, do not recommend using for a running instance!
+// TODO NR - maybe this should be hidden?
+var whisperRestoreCmd = &cobra.Command{
 	Use:   "restore",
-	Short: "Restores the latest checkpoint by default for a given job with [job-id] on a fresh instance",
+	Short: "Restores the latest checkpoint by default for a given job with [job-id] on an existing instance",
 	Long:  "Restore by default applies the latest checkpoint, downloading the latest synced workdir and running the restore command (if specified).",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if jobID == "" {
 			return fmt.Errorf("job-id is required")
 		}
-		c, err := NewCommune(jobID)
+		w, err := NewWhisperer(jobID)
 		if err != nil {
 			return err
 		}
 
-		err = c.sendRestoreCommand(jobID, true)
+		err = w.sendRestoreCommand(jobID, true)
 		if err != nil {
 			return err
 		}
@@ -141,17 +145,17 @@ var listCheckpointsCmd = &cobra.Command{
 		if jobID == "" {
 			return fmt.Errorf("job-id is required")
 		}
-		c, err := NewCommune(jobID)
+		w, err := NewWhisperer(jobID)
 		if err != nil {
 			return err
 		}
 
-		c.prettyPrintCheckpoints(jobID)
+		w.prettyPrintCheckpoints(jobID)
 		return nil
 	},
 }
 
-func (c *Commune) sendCheckpointCommand(jobID string) {
+func (c *Whisperer) sendCheckpointCommand(jobID string) {
 	serverCommand := types.ServerCommand{
 		Command: "checkpoint",
 	}
@@ -162,7 +166,7 @@ func (c *Commune) sendCheckpointCommand(jobID string) {
 	fmt.Printf("Successfully checkpointed job %s at %s\n", jobID, time.Now().Format("2006-01-02 15:04:05"))
 }
 
-func (c *Commune) sendRestoreCommand(jobID string, restoreFromLatest bool) error {
+func (c *Whisperer) sendRestoreCommand(jobID string, restoreFromLatest bool) error {
 	jsc, err := c.nc.JetStream()
 	if err != nil {
 		return err
@@ -179,6 +183,7 @@ func (c *Commune) sendRestoreCommand(jobID string, restoreFromLatest bool) error
 	}
 
 	// either restore from latest (by pulling from latest) or take a defined path to restore from
+	// this is so UGLY
 	if !restoreFromLatest {
 		var exists bool
 		for _, file := range files {
@@ -193,7 +198,6 @@ func (c *Commune) sendRestoreCommand(jobID string, restoreFromLatest bool) error
 		}
 	} else {
 		var lastModifiedTime time.Time
-
 		// get last modified checkpoint
 		for _, file := range files {
 			if file.ModTime.After(lastModifiedTime) {
@@ -229,7 +233,7 @@ func (c *Commune) sendRestoreCommand(jobID string, restoreFromLatest bool) error
 	return nil
 }
 
-func (c *Commune) prettyPrintCheckpoints(jobID string) error {
+func (c *Whisperer) prettyPrintCheckpoints(jobID string) error {
 	jsc, err := c.nc.JetStream()
 	if err != nil {
 		return err
@@ -294,17 +298,17 @@ func createNatsConn(logger *zerolog.Logger, config *utils.CedanaConfig) (*nats.C
 
 func init() {
 	checkpointCmd.Flags().StringVarP(&jobID, "job-id", "j", "", "job id")
-	communeRestoreCmd.Flags().StringVarP(&jobID, "job-id", "j", "", "job id")
+	whisperRestoreCmd.Flags().StringVarP(&jobID, "job-id", "j", "", "job id")
 	checkpointCmd.Flags().BoolVarP(&debug, "debug", "d", false, "debug mode")
-	communeRestoreCmd.Flags().BoolVarP(&debug, "debug", "d", false, "debug mode")
-	communeRestoreCmd.Flags().BoolVarP(&restoreFromLatest, "latest", "l", false, "restore from latest checkpoint")
-	communeRestoreCmd.Flags().StringVarP(&path, "path", "p", "", "path to restore from")
-	communeRestoreCmd.Flags().StringVarP(&checkpointType, "type", "t", "", "type of checkpoint")
-	communeRestoreCmd.MarkFlagsMutuallyExclusive("latest", "path")
-	communeRestoreCmd.MarkFlagsRequiredTogether("type", "path")
+	whisperRestoreCmd.Flags().BoolVarP(&debug, "debug", "d", false, "debug mode")
+	whisperRestoreCmd.Flags().BoolVarP(&restoreFromLatest, "latest", "l", false, "restore from latest checkpoint")
+	whisperRestoreCmd.Flags().StringVarP(&path, "path", "p", "", "path to restore from")
+	whisperRestoreCmd.Flags().StringVarP(&checkpointType, "type", "t", "", "type of checkpoint")
+	whisperRestoreCmd.MarkFlagsMutuallyExclusive("latest", "path")
+	whisperRestoreCmd.MarkFlagsRequiredTogether("type", "path")
 	listCheckpointsCmd.Flags().StringVarP(&jobID, "job-id", "j", "", "job id")
-	rootCmd.AddCommand(communeCmd)
-	communeCmd.AddCommand(checkpointCmd)
-	communeCmd.AddCommand(communeRestoreCmd)
-	communeCmd.AddCommand(listCheckpointsCmd)
+	rootCmd.AddCommand(whisperCmd)
+	whisperCmd.AddCommand(checkpointCmd)
+	whisperCmd.AddCommand(whisperRestoreCmd)
+	whisperCmd.AddCommand(listCheckpointsCmd)
 }

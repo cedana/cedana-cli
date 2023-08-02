@@ -359,7 +359,6 @@ func (s *Spot) DescribeInstance(instances []*cedana.Instance, filter string) err
 	// Describing the instance is also an opportunity to update the instance state
 	for _, res := range out.Reservations {
 		for _, i := range res.Instances {
-			// Describing the instance is also an opportunity to update the instance state
 			inst := ReverseLookupInstancesById(instances, StringPtrToString(i.InstanceId))
 
 			if inst != nil {

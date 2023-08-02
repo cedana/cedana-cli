@@ -281,16 +281,13 @@ func (r *Runner) restoreJob(jobID string) error {
 		return err
 	}
 
-	comm, err := NewCommune(job.JobID)
+	w, err := NewWhisperer(job.JobID)
 	if err != nil {
 		return err
 	}
-	defer comm.cleanup()
-	comm.orch.AttachNewWorker(worker.CedanaID)
-	// wait a few seconds before sending a restore
-	time.Sleep(10 * time.Second)
-
-	comm.sendRestoreCommand(r.job.JobID, true)
+	defer w.cleanup()
+	w.orch.AttachNewWorker(worker.CedanaID)
+	w.sendRestoreCommand(r.job.JobID, true)
 
 	return nil
 
