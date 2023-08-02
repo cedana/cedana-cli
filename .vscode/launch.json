@@ -99,7 +99,7 @@
             "mode": "debug",
             "program": "${fileDirname}",
             "console": "integratedTerminal",
-            "args": ["commune", "list-checkpoints", "-j", "${input:promptForJobID}"],
+            "args": ["whisper", "list-checkpoints", "-j", "${input:promptForJobID}"],
             "env": {
                 "CEDANA_LOG_LEVEL": "0",
                 "GO111MODULE": "on"
