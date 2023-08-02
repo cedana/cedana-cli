@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// These flags need to be cleaned up, they're ugly
 var jobID string
 var debug bool
 var restoreFromLatest bool
