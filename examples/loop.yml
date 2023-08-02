@@ -1,0 +1,8 @@
+instance_specs:
+  max_price_usd_hour: 0.2 
+
+work_dir: "workdir"
+
+task:
+  run:
+  - "./test.sh"

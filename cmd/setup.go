@@ -470,9 +470,9 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 		// wrap command in setsid so it can be checkpointed
 		// TODO: this is very hacky
 		if workDir != "" {
-			*b = append(*b, fmt.Sprintf("cd %s && setsid %s < /dev/null &> test.log &", workDir, task.C[0]))
+			*b = append(*b, fmt.Sprintf("cd %s && setsid %s < /dev/null &> output.log &", workDir, task.C[0]))
 		} else {
-			*b = append(*b, fmt.Sprintf("setsid %s < /dev/null &> test.log &", task.C[0]))
+			*b = append(*b, fmt.Sprintf("setsid %s < /dev/null &> output.log &", task.C[0]))
 		}
 	}
 }
