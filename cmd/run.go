@@ -164,21 +164,21 @@ var destroyCmd = &cobra.Command{
 		// TODO NR: assuming for now user just wants to destroy one instance, have to expand
 		id := args[0]
 
-		instance := r.db.GetInstanceByProviderId(id)
-		if instance == nil {
+		instance := r.db.GetInstanceByCedanaID(id)
+		if instance.ID == 0 {
 			return fmt.Errorf("could not find instance with id %s", id)
 		}
 
 		switch instance.Provider {
 		case "aws":
 			aws := r.providers["aws"]
-			err := aws.DestroyInstance(*instance)
+			err := aws.DestroyInstance(instance)
 			if err != nil {
 				return err
 			}
 		case "paperspace":
 			paperspace := r.providers["paperspace"]
-			err := paperspace.DestroyInstance(*instance)
+			err := paperspace.DestroyInstance(instance)
 			if err != nil {
 				return err
 			}

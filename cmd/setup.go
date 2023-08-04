@@ -31,10 +31,9 @@ var jobFile string
 var instanceId string
 
 var SetupCmd = &cobra.Command{
-	Use:    "setup",
-	Short:  "Manually set up a launched instance with Cedana defaults and user-provided scripts",
-	Long:   "Provide commands to run on the remote instance in user_commands.yaml in the ~/.cedana config folder",
-	Hidden: true,
+	Use:   "setup",
+	Short: "Manually set up a launched instance with Cedana defaults and user-provided scripts",
+	Long:  "Provide commands to run on the remote instance in user_commands.yaml in the ~/.cedana config folder",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// ClientSetup takes a SpotInstance as input - match against the state file
 		db := db.NewDB()
@@ -44,7 +43,7 @@ var SetupCmd = &cobra.Command{
 			l.Fatal().Err(err).Msg("could not set up cedana job")
 		}
 
-		instance := db.GetInstanceByProviderId(instanceId)
+		instance := db.GetInstanceByCedanaID(instanceId)
 		if instance.IPAddress == "" {
 			return fmt.Errorf("could not find instance with id %s", instanceId)
 		}
@@ -56,7 +55,7 @@ var SetupCmd = &cobra.Command{
 		is := InstanceSetup{
 			logger:   &l,
 			cfg:      cfg,
-			instance: *instance,
+			instance: instance,
 			jobFile:  jobFile,
 		}
 
