@@ -1,13 +1,15 @@
 instance_specs:
-  memory_gb: 30
-  cpu_cores: 4
-  max_price_usd_hour: 1
-work_dir: '/home/USER/work_dir'
+    memory_gb: 30
+    cpu_cores: 4
+    max_price_usd_hour: 1
+work_dir: 'work_dir'
+
 setup:
-  run: 
-    - 'sudo apt-get update && sudo apt-get install -y python3 python3-venv'
-    - 'docker build -t trill .'
+    run:
+      - 'sudo apt-get update && sudo apt-get install -y python3 python3-venv'
+      - 'sudo docker build -t trill -f work_dir/TRILL/Dockerfile'
+
 
 task:
-  run:
-    - 'echo "hello world" ; docker run trill example_1 0 -h'
+    run:
+      - 'echo "hello world" ; docker run trill example_1 0 -h'
