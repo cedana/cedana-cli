@@ -5,4 +5,4 @@ work_dir: "workdir"
 
 task:
   run:
-  - "./test.sh"
+   "./test.sh"
