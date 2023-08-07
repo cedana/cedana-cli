@@ -103,6 +103,50 @@ var runCmd = &cobra.Command{
 	},
 }
 
+var retryCmd = &cobra.Command{
+	Use:   "retry",
+	Short: "Retry a failed setup from jobID [job-id]",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := buildRunner()
+		defer r.cleanRunner()
+
+		jobID := args[0]
+
+		// check db for existing job
+		job := r.db.GetJob(jobID)
+		if job == nil {
+			return fmt.Errorf("could not find job with id %s", jobID)
+		}
+
+		r.job = job
+		// pull worker ID out
+
+		attachedInstanceIDs, err := job.GetInstanceIds()
+		if err != nil {
+			return err
+		}
+
+		var workerID string
+
+		// this should be way better. ideally the spun up instances themselves
+		// should have
+		for _, i := range attachedInstanceIDs {
+			instance := r.db.GetInstanceByCedanaID(i.InstanceID)
+			if instance.Tag == "worker" {
+				workerID = i.InstanceID
+			}
+		}
+
+		err = r.retryJob(workerID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 var showInstancesCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show instances launched with Cedana",
@@ -237,6 +281,49 @@ var restoreCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// very basic retry of a failed setup, allows users to play with the yaml without
+// needing to tear down and redeploy
+func (r *Runner) retryJob(workerID string) error {
+	// find worker
+	worker := r.db.GetInstanceByCedanaID(workerID)
+	if worker.CedanaID != workerID {
+		return fmt.Errorf("could not find worker with id %s", workerID)
+	}
+
+	is := BuildInstanceSetup(worker, *r.job)
+
+	err := is.ClientSetup(true)
+
+	if err != nil {
+		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", worker.CedanaID, "yourjob.yml")
+		r.db.UpdateJobState(r.job, types.JobStateSetupFailed)
+		return err
+	}
+
+	r.db.UpdateJobState(r.job, types.JobStateRunning)
+
+	// job is orchestrated by a local worker
+	orch, err := r.db.CreateInstance(&cedana.Instance{
+		Provider:    "local",
+		IPAddress:   "0.0.0.0",
+		Tag:         "orchestrator",
+		State:       "running",
+		AllocatedID: "local",
+	})
+
+	r.db.AttachInstanceToJob(r.job, *orch)
+
+	if err != nil {
+		return err
+	}
+
+	cd := NewCLIDaemon()
+	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID)
+
+	return nil
+
 }
 
 // restoreJob manually restores the most recent checkpoint onto a new instance
@@ -647,4 +734,5 @@ func init() {
 	rootCmd.AddCommand(showInstancesCmd)
 	rootCmd.AddCommand(destroyAllCmd)
 	rootCmd.AddCommand(restoreCmd)
+	rootCmd.AddCommand(retryCmd)
 }

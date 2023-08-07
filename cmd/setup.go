@@ -26,7 +26,6 @@ type InstanceSetup struct {
 	job      *cedana.Job
 }
 
-var userOnly bool
 var jobFile string
 var instanceId string
 
@@ -49,7 +48,7 @@ var SetupCmd = &cobra.Command{
 		}
 		cfg, err := utils.InitCedanaConfig()
 		if err != nil {
-			return fmt.Errorf("could not load spot config %v", err)
+			return fmt.Errorf("could not load config %v", err)
 		}
 
 		is := InstanceSetup{
@@ -59,11 +58,7 @@ var SetupCmd = &cobra.Command{
 			jobFile:  jobFile,
 		}
 
-		if userOnly {
-			is.execUserCommands()
-		} else {
-			is.ClientSetup(true)
-		}
+		is.ClientSetup(true)
 		return nil
 	},
 }
@@ -147,25 +142,6 @@ func (is *InstanceSetup) CreateConn() (*ssh.Client, error) {
 	}
 
 	return conn, nil
-}
-
-func (is *InstanceSetup) execUserCommands() error {
-	// only runs user commands
-	conn, err := is.CreateConn()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	var cmds []string
-	is.buildUserSetupCommands(&cmds)
-
-	err = is.execCommands(cmds, conn)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error executing commands")
-	}
-
-	return nil
 }
 
 // Runs cedana-specific and user-specified instantiation scripts for a client instance in an SSH session.
@@ -535,7 +511,6 @@ func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 
 func init() {
 	rootCmd.AddCommand(SetupCmd)
-	SetupCmd.Flags().BoolVar(&userOnly, "user", false, "run only user-specificed commands on remote instance")
 	SetupCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file to use for setup")
 	SetupCmd.Flags().StringVarP(&instanceId, "instance", "i", "", "provider instance id to setup")
 	cobra.MarkFlagRequired(SetupCmd.Flags(), "job")
