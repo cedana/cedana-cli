@@ -127,18 +127,18 @@ var retryCmd = &cobra.Command{
 			return err
 		}
 
-		var workerID string
+		var worker cedana.Instance
 
 		// this should be way better. ideally the spun up instances themselves
 		// should have
 		for _, i := range attachedInstanceIDs {
 			instance := r.db.GetInstanceByCedanaID(i.InstanceID)
 			if instance.Tag == "worker" {
-				workerID = i.InstanceID
+				worker = instance
 			}
 		}
 
-		err = r.retryJob(workerID)
+		err = r.retryJob(worker)
 		if err != nil {
 			return err
 		}
@@ -285,13 +285,7 @@ var restoreCmd = &cobra.Command{
 
 // very basic retry of a failed setup, allows users to play with the yaml without
 // needing to tear down and redeploy
-func (r *Runner) retryJob(workerID string) error {
-	// find worker
-	worker := r.db.GetInstanceByCedanaID(workerID)
-	if worker.CedanaID != workerID {
-		return fmt.Errorf("could not find worker with id %s", workerID)
-	}
-
+func (r *Runner) retryJob(worker cedana.Instance) error {
 	is := BuildInstanceSetup(worker, *r.job)
 
 	err := is.ClientSetup(true)
