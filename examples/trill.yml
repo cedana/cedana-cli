@@ -7,9 +7,9 @@ work_dir: 'work_dir'
 setup:
     run:
       - 'sudo apt-get update && sudo apt-get install -y python3 python3-venv'
-      - 'cd work_dir/TRILL && sudo docker build -t trill -f .'
+      - 'cd work_dir/TRILL && sudo docker build -t trill .'
 
 
 task:
     run:
-      - 'echo "hello world" ; docker run trill example_1 0 -h'
+      - 'echo "hello world" ; sudo docker run trill example_1 0 -h'
