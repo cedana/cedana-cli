@@ -103,6 +103,50 @@ var runCmd = &cobra.Command{
 	},
 }
 
+var retryCmd = &cobra.Command{
+	Use:   "retry",
+	Short: "Retry a failed setup from jobID [job-id]",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := buildRunner()
+		defer r.cleanRunner()
+
+		jobID := args[0]
+
+		// check db for existing job
+		job := r.db.GetJob(jobID)
+		if job == nil {
+			return fmt.Errorf("could not find job with id %s", jobID)
+		}
+
+		r.job = job
+		// pull worker ID out
+
+		attachedInstanceIDs, err := job.GetInstanceIds()
+		if err != nil {
+			return err
+		}
+
+		var worker cedana.Instance
+
+		// this should be way better. ideally the spun up instances themselves
+		// should have
+		for _, i := range attachedInstanceIDs {
+			instance := r.db.GetInstanceByCedanaID(i.InstanceID)
+			if instance.Tag == "worker" {
+				worker = instance
+			}
+		}
+
+		err = r.retryJob(worker)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 var showInstancesCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show instances launched with Cedana",
@@ -164,21 +208,21 @@ var destroyCmd = &cobra.Command{
 		// TODO NR: assuming for now user just wants to destroy one instance, have to expand
 		id := args[0]
 
-		instance := r.db.GetInstanceByProviderId(id)
-		if instance == nil {
+		instance := r.db.GetInstanceByCedanaID(id)
+		if instance.ID == 0 {
 			return fmt.Errorf("could not find instance with id %s", id)
 		}
 
 		switch instance.Provider {
 		case "aws":
 			aws := r.providers["aws"]
-			err := aws.DestroyInstance(*instance)
+			err := aws.DestroyInstance(instance)
 			if err != nil {
 				return err
 			}
 		case "paperspace":
 			paperspace := r.providers["paperspace"]
-			err := paperspace.DestroyInstance(*instance)
+			err := paperspace.DestroyInstance(instance)
 			if err != nil {
 				return err
 			}
@@ -237,6 +281,43 @@ var restoreCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// very basic retry of a failed setup, allows users to play with the yaml without
+// needing to tear down and redeploy
+func (r *Runner) retryJob(worker cedana.Instance) error {
+	is := BuildInstanceSetup(worker, *r.job)
+
+	err := is.ClientSetup(true)
+
+	if err != nil {
+		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", worker.CedanaID, "yourjob.yml")
+		r.db.UpdateJobState(r.job, types.JobStateSetupFailed)
+		return err
+	}
+
+	r.db.UpdateJobState(r.job, types.JobStateRunning)
+
+	// job is orchestrated by a local worker
+	orch, err := r.db.CreateInstance(&cedana.Instance{
+		Provider:    "local",
+		IPAddress:   "0.0.0.0",
+		Tag:         "orchestrator",
+		State:       "running",
+		AllocatedID: "local",
+	})
+
+	r.db.AttachInstanceToJob(r.job, *orch)
+
+	if err != nil {
+		return err
+	}
+
+	cd := NewCLIDaemon()
+	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID)
+
+	return nil
+
 }
 
 // restoreJob manually restores the most recent checkpoint onto a new instance
@@ -647,4 +728,5 @@ func init() {
 	rootCmd.AddCommand(showInstancesCmd)
 	rootCmd.AddCommand(destroyAllCmd)
 	rootCmd.AddCommand(restoreCmd)
+	rootCmd.AddCommand(retryCmd)
 }

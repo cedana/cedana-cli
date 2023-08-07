@@ -26,15 +26,13 @@ type InstanceSetup struct {
 	job      *cedana.Job
 }
 
-var userOnly bool
 var jobFile string
 var instanceId string
 
 var SetupCmd = &cobra.Command{
-	Use:    "setup",
-	Short:  "Manually set up a launched instance with Cedana defaults and user-provided scripts",
-	Long:   "Provide commands to run on the remote instance in user_commands.yaml in the ~/.cedana config folder",
-	Hidden: true,
+	Use:   "setup",
+	Short: "Manually set up a launched instance with Cedana defaults and user-provided scripts",
+	Long:  "Provide commands to run on the remote instance in user_commands.yaml in the ~/.cedana config folder",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// ClientSetup takes a SpotInstance as input - match against the state file
 		db := db.NewDB()
@@ -44,27 +42,23 @@ var SetupCmd = &cobra.Command{
 			l.Fatal().Err(err).Msg("could not set up cedana job")
 		}
 
-		instance := db.GetInstanceByProviderId(instanceId)
+		instance := db.GetInstanceByCedanaID(instanceId)
 		if instance.IPAddress == "" {
 			return fmt.Errorf("could not find instance with id %s", instanceId)
 		}
 		cfg, err := utils.InitCedanaConfig()
 		if err != nil {
-			return fmt.Errorf("could not load spot config %v", err)
+			return fmt.Errorf("could not load config %v", err)
 		}
 
 		is := InstanceSetup{
 			logger:   &l,
 			cfg:      cfg,
-			instance: *instance,
+			instance: instance,
 			jobFile:  jobFile,
 		}
 
-		if userOnly {
-			is.execUserCommands()
-		} else {
-			is.ClientSetup(true)
-		}
+		is.ClientSetup(true)
 		return nil
 	},
 }
@@ -148,25 +142,6 @@ func (is *InstanceSetup) CreateConn() (*ssh.Client, error) {
 	}
 
 	return conn, nil
-}
-
-func (is *InstanceSetup) execUserCommands() error {
-	// only runs user commands
-	conn, err := is.CreateConn()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	var cmds []string
-	is.buildUserSetupCommands(&cmds)
-
-	err = is.execCommands(cmds, conn)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error executing commands")
-	}
-
-	return nil
 }
 
 // Runs cedana-specific and user-specified instantiation scripts for a client instance in an SSH session.
@@ -536,7 +511,6 @@ func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 
 func init() {
 	rootCmd.AddCommand(SetupCmd)
-	SetupCmd.Flags().BoolVar(&userOnly, "user", false, "run only user-specificed commands on remote instance")
 	SetupCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file to use for setup")
 	SetupCmd.Flags().StringVarP(&instanceId, "instance", "i", "", "provider instance id to setup")
 	cobra.MarkFlagRequired(SetupCmd.Flags(), "job")
