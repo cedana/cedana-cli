@@ -444,10 +444,17 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 	} else {
 		// wrap command in setsid so it can be checkpointed
 		// TODO: this is very hacky
-		if workDir != "" {
-			*b = append(*b, fmt.Sprintf("cd %s && setsid %s < /dev/null &> output.log &", workDir, task.C[0]))
+		if strings.Contains(task.C[0], "docker") {
+			// no need to setsid if this is a container 
+			// TODO NR: this needs to be overhauled (just assume user adds a detach) 
+			*b = append(*b, task.C[0])
+
 		} else {
-			*b = append(*b, fmt.Sprintf("setsid %s < /dev/null &> output.log &", task.C[0]))
+			if workDir != "" {
+				*b = append(*b, fmt.Sprintf("cd %s && setsid %s < /dev/null &> output.log &", workDir, task.C[0]))
+			} else {
+				*b = append(*b, fmt.Sprintf("setsid %s < /dev/null &> output.log &", task.C[0]))
+			}
 		}
 	}
 }
