@@ -240,7 +240,7 @@ func (cd *CLIDaemon) UpdateJobStatus(jobID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
 
-	cons, err := cd.js.AddConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
+	cons, err := cd.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
 		AckPolicy:     jetstream.AckNonePolicy,
 		DeliverPolicy: jetstream.DeliverNewPolicy,
 		FilterSubject: strings.Join([]string{"CEDANA", jobID, "state"}, "."),
@@ -291,15 +291,12 @@ func (cd *CLIDaemon) UpdateJobStatus(jobID string) error {
 }
 
 func (cd *CLIDaemon) sendStatus(state types.MetaState, clientID string, jobID string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
 	stateMarshalled, err := json.Marshal(state)
 	if err != nil {
 		cd.logger.Fatal().Err(err).Msg("could not marshal command")
 	}
 
-	ackF, err := cd.js.PublishAsync(ctx, strings.Join([]string{"CEDANA", jobID, clientID, "meta"}, "."), stateMarshalled)
+	ackF, err := cd.js.PublishAsync(strings.Join([]string{"CEDANA", jobID, clientID, "meta"}, "."), stateMarshalled)
 	if err != nil {
 		cd.logger.Info().Msgf("could not publish command with error %v", err)
 	}

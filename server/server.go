@@ -39,7 +39,7 @@ func (co *CedanaOrchestrator) AttachNewWorker(id string) {
 func (co *CedanaOrchestrator) GenClientStateIterator(ctx context.Context) (jetstream.MessagesContext, error) {
 	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.state", co.jid, co.wid)
 	// create a consumer of client state
-	cons, err := co.js.AddConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
+	cons, err := co.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
 		AckPolicy:     jetstream.AckNonePolicy,
 		DeliverPolicy: jetstream.DeliverNewPolicy,
 		FilterSubject: strings.Join([]string{"CEDANA", co.jid, co.wid, "state"}, "."),
@@ -59,7 +59,7 @@ func (co *CedanaOrchestrator) GenClientStateIterator(ctx context.Context) (jetst
 func (co *CedanaOrchestrator) GenMetaStateIterator(ctx context.Context) (jetstream.MessagesContext, error) {
 	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.meta", co.jid, co.wid)
 	// create a consumer of meta state
-	cons, err := co.js.AddConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
+	cons, err := co.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
 		AckPolicy:     jetstream.AckNonePolicy,
 		DeliverPolicy: jetstream.DeliverNewPolicy,
 		FilterSubject: strings.Join([]string{"CEDANA", co.jid, co.wid, "meta"}, "."),
@@ -80,7 +80,7 @@ func (co *CedanaOrchestrator) PublishCommand(ctx context.Context, command core.S
 		co.logger.Fatal().Err(err).Msg("could not marshal command")
 	}
 
-	ackF, err := co.js.PublishAsync(ctx, strings.Join([]string{"CEDANA", co.jid, co.wid, "commands"}, "."), cmd)
+	ackF, err := co.js.PublishAsync(strings.Join([]string{"CEDANA", co.jid, co.wid, "commands"}, "."), cmd)
 	if err != nil {
 		co.logger.Info().Msgf("could not publish command with error %v", err)
 	}
