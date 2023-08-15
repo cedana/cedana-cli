@@ -84,7 +84,7 @@ func NewCLIDaemon() *CLIDaemon {
 	logger := utils.GetLogger()
 	config, err := utils.InitCedanaConfig()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("could not set up spot config")
+		logger.Fatal().Err(err).Msg("could not set up cedana config")
 	}
 
 	runner := buildRunner()

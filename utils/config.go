@@ -146,7 +146,7 @@ func CreateCedanaConfig(path string) error {
 	// marshal sc into path
 	b, err := json.Marshal(sc)
 	if err != nil {
-		return fmt.Errorf("err: %v, could not marshal spot config struct to file", err)
+		return fmt.Errorf("err: %v, could not marshal config struct to file", err)
 	}
 	err = os.WriteFile(path, b, 0o644)
 	if err != nil {

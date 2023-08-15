@@ -21,15 +21,19 @@ import (
 var lastUsedRegion string
 
 type Spot struct {
-	Ctx          context.Context
-	Cfg          *utils.CedanaConfig
-	Logger       *zerolog.Logger
-	Client       EC2CreateInstanceAPI
-	LaunchParams *ec2.CreateFleetInput
-	db           *db.DB
+	Ctx    context.Context
+	Cfg    *utils.CedanaConfig
+	Logger *zerolog.Logger
+	Client EC2API
+	db     *db.DB
 }
 
-type EC2CreateInstanceAPI interface {
+// This abstraction should be replicated wherever possible
+// with other providers, simply because it makes testing a lot easier and so we can mock
+// some of these functions - especially once we start doing more complex things with these APIs.
+// It's not exactly ideal from a complexity perspective, but I think it's worth doing.
+
+type EC2API interface {
 	CreateFleet(ctx context.Context,
 		params *ec2.CreateFleetInput,
 		optFns ...func(*ec2.Options)) (*ec2.CreateFleetOutput, error)
@@ -79,47 +83,47 @@ type EC2CreateInstanceAPI interface {
 		optFns ...func(*ec2.Options)) (*ec2.DescribeSpotInstanceRequestsOutput, error)
 }
 
-func AWSCreateFleet(c context.Context, api EC2CreateInstanceAPI, input *ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error) {
+func AWSCreateFleet(c context.Context, api EC2API, input *ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error) {
 	return api.CreateFleet(c, input)
 }
 
-func AWSGetScores(c context.Context, api EC2CreateInstanceAPI, input *ec2.GetSpotPlacementScoresInput) (*ec2.GetSpotPlacementScoresOutput, error) {
+func AWSGetScores(c context.Context, api EC2API, input *ec2.GetSpotPlacementScoresInput) (*ec2.GetSpotPlacementScoresOutput, error) {
 	return api.GetSpotPlacementScores(c, input)
 }
 
-func AWSGetLaunchTemplate(c context.Context, api EC2CreateInstanceAPI, input *ec2.DescribeLaunchTemplateVersionsInput) (*ec2.DescribeLaunchTemplateVersionsOutput, error) {
+func AWSGetLaunchTemplate(c context.Context, api EC2API, input *ec2.DescribeLaunchTemplateVersionsInput) (*ec2.DescribeLaunchTemplateVersionsOutput, error) {
 	return api.DescribeLaunchTemplateVersions(c, input)
 }
 
-func AWSCreateLaunchTemplate(c context.Context, api EC2CreateInstanceAPI, input *ec2.CreateLaunchTemplateInput) (*ec2.CreateLaunchTemplateOutput, error) {
+func AWSCreateLaunchTemplate(c context.Context, api EC2API, input *ec2.CreateLaunchTemplateInput) (*ec2.CreateLaunchTemplateOutput, error) {
 	return api.CreateLaunchTemplate(c, input)
 }
 
-func AWSDescribeInstances(c context.Context, api EC2CreateInstanceAPI, input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+func AWSDescribeInstances(c context.Context, api EC2API, input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
 	return api.DescribeInstances(c, input)
 }
 
-func AWSTerminateInstances(c context.Context, api EC2CreateInstanceAPI, input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
+func AWSTerminateInstances(c context.Context, api EC2API, input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
 	return api.TerminateInstances(c, input)
 }
 
-func AWSDescribeAvailabilityZones(c context.Context, api EC2CreateInstanceAPI, input *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error) {
+func AWSDescribeAvailabilityZones(c context.Context, api EC2API, input *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error) {
 	return api.DescribeAvailabilityZones(c, input)
 }
 
-func AWSDescribeSubnets(c context.Context, api EC2CreateInstanceAPI, input *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
+func AWSDescribeSubnets(c context.Context, api EC2API, input *ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error) {
 	return api.DescribeSubnets(c, input)
 }
 
-func AWSDescribeVPCs(c context.Context, api EC2CreateInstanceAPI, input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
+func AWSDescribeVPCs(c context.Context, api EC2API, input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error) {
 	return api.DescribeVpcs(c, input)
 }
 
-func AWSCreateSubnet(c context.Context, api EC2CreateInstanceAPI, input *ec2.CreateSubnetInput) (*ec2.CreateSubnetOutput, error) {
+func AWSCreateSubnet(c context.Context, api EC2API, input *ec2.CreateSubnetInput) (*ec2.CreateSubnetOutput, error) {
 	return api.CreateSubnet(c, input)
 }
 
-func AWSDescribeSpotInstanceRequests(c context.Context, api EC2CreateInstanceAPI, input *ec2.DescribeSpotInstanceRequestsInput) (*ec2.DescribeSpotInstanceRequestsOutput, error) {
+func AWSDescribeSpotInstanceRequests(c context.Context, api EC2API, input *ec2.DescribeSpotInstanceRequestsInput) (*ec2.DescribeSpotInstanceRequestsOutput, error) {
 	return api.DescribeSpotInstanceRequests(c, input)
 }
 
@@ -175,13 +179,13 @@ func (s *Spot) Name() string {
 	return "aws"
 }
 
-func (s *Spot) spotSetup(i *cedana.Instance) error {
+func (s *Spot) spotSetup(i *cedana.Instance) (*ec2.CreateFleetInput, error) {
 	// launch template check
 	valid := s.isValidLaunchTemplateName(s.Cfg.AWSConfig.LaunchTemplateName)
 	if !valid {
-		return fmt.Errorf("invalid launch template name: %s", s.Cfg.AWSConfig.LaunchTemplateName)
+		return nil, fmt.Errorf("invalid launch template name: %s", s.Cfg.AWSConfig.LaunchTemplateName)
 	}
-	s.LaunchParams = &ec2.CreateFleetInput{
+	launchParams := &ec2.CreateFleetInput{
 		// launch template config is stupid and annoying, but the overriding the override param
 		// gives us the flexibility we need. There's too many lists though!
 
@@ -207,7 +211,7 @@ func (s *Spot) spotSetup(i *cedana.Instance) error {
 		},
 	}
 
-	return nil
+	return launchParams, nil
 }
 
 func (s *Spot) CreateInstance(i *cedana.Instance) (*cedana.Instance, error) {
@@ -223,13 +227,13 @@ func (s *Spot) CreateInstance(i *cedana.Instance) (*cedana.Instance, error) {
 
 	s.Logger.Info().Msg("creating fleet...")
 
-	err = s.spotSetup(i)
+	launchParams, err := s.spotSetup(i)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: this needs a retrier
-	outp, err := AWSCreateFleet(s.Ctx, s.Client, s.LaunchParams)
+	outp, err := AWSCreateFleet(s.Ctx, s.Client, launchParams)
 	if err != nil {
 		s.Logger.Fatal().Err(err).Msgf("could not create instance")
 		return nil, err

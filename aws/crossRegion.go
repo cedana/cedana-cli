@@ -12,7 +12,7 @@ import (
 func CopyTemplate(fromRegion string, toRegion string, launchTemplateId string, launchTemplateName string, logger *zerolog.Logger) (*string, error) {
 	var client *ec2.Client
 	ctx := context.TODO()
-	client, err := MakeClient(&fromRegion)
+	client, err := MakeEC2Client(&fromRegion)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func CopyTemplate(fromRegion string, toRegion string, launchTemplateId string, l
 	resp := launchTemplates[0]
 
 	// create new client
-	client, err = MakeClient(&toRegion)
+	client, err = MakeEC2Client(&toRegion)
 	if err != nil {
 		return nil, err
 	}
