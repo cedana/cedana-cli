@@ -17,6 +17,8 @@ import (
 	"github.com/rs/zerolog"
 	gd "github.com/sevlyar/go-daemon"
 	"github.com/spf13/cobra"
+
+	core "github.com/cedana/cedana/types"
 )
 
 /*
@@ -263,7 +265,7 @@ func (cd *CLIDaemon) UpdateJobStatus(jobID string) error {
 
 		// inefficient (TODO NR) we're just passing along cedanaState
 		data := msg.Data()
-		var cedanaState types.CedanaState
+		var cedanaState core.CedanaState
 		err = json.Unmarshal(data, &cedanaState)
 		if err != nil {
 			// skip error
@@ -277,7 +279,7 @@ func (cd *CLIDaemon) UpdateJobStatus(jobID string) error {
 		// get latest job
 		j := cd.db.GetJob(jobID)
 
-		if cedanaState.CheckpointState == types.CheckpointSuccess {
+		if cedanaState.CheckpointState == core.CheckpointSuccess {
 			j.Checkpointed = true
 			j.LastCheckpointedAt = time.Now()
 			j.Bucket = cedanaState.CheckpointPath

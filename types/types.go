@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/net"
-	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
 )
@@ -111,55 +109,6 @@ func (j *Job) AppendInstance(id string) error {
 
 	return nil
 }
-
-// CedanaState encapsulates a CRIU checkpoint and includes
-// filesystem state for a full restore. Typically serialized and shot around
-// over the wire.
-type CedanaState struct {
-	ClientInfo     ClientInfo     `json:"client_info" mapstructure:"client_info"`
-	ProcessInfo    ProcessInfo    `json:"process_info" mapstructure:"process_info"`
-	CheckpointType CheckpointType `json:"checkpoint_type" mapstructure:"checkpoint_type"`
-	// either local or remote checkpoint path (url vs filesystem path)
-	CheckpointPath string `json:"checkpoint_path" mapstructure:"checkpoint_path"`
-	// process state at time of checkpoint
-	CheckpointState CheckpointState `json:"checkpoint_state" mapstructure:"checkpoint_state"`
-}
-
-// TODO: Until there's a shared library, we'll have to duplicate this struct
-
-type ProcessInfo struct {
-	PID                     int32                   `json:"pid" mapstructure:"pid"`
-	AttachedToHardwareAccel bool                    `json:"attached_to_hardware_accel" mapstructure:"attached_to_hardware_accel"`
-	OpenFds                 []process.OpenFilesStat `json:"open_fds" mapstructure:"open_fds"` // list of open FDs
-	OpenWriteOnlyFilePaths  []string                `json:"open_write_only" mapstructure:"open_write_only"`
-	OpenConnections         []net.ConnectionStat    `json:"open_connections" mapstructure:"open_connections"` // open network connections
-	MemoryPercent           float32                 `json:"memory_percent" mapstructure:"memory_percent"`     // % of total RAM used
-	IsRunning               bool                    `json:"is_running" mapstructure:"is_running"`
-	Status                  string                  `json:"status" mapstructure:"status"`
-}
-
-type ClientInfo struct {
-	Id              string `json:"id" mapstructure:"id"`
-	Hostname        string `json:"hostname" mapstructure:"hostname"`
-	Platform        string `json:"platform" mapstructure:"platform"`
-	OS              string `json:"os" mapstructure:"os"`
-	Uptime          uint64 `json:"uptime" mapstructure:"uptime"`
-	RemainingMemory uint64 `json:"remaining_memory" mapstructure:"remaining_memory"`
-}
-
-type ServerCommand struct {
-	Command     string      `json:"command" mapstructure:"command"`
-	Heartbeat   bool        `json:"heartbeat" mapstructure:"heartbeat"`
-	CedanaState CedanaState `json:"cedana_state" mapstructure:"cedana_state"`
-}
-
-type CheckpointType string
-
-const (
-	CheckpointTypeNone    CheckpointType = "none"
-	CheckpointTypeCRIU    CheckpointType = "criu"
-	CheckpointTypePytorch CheckpointType = "pytorch"
-)
 
 type MetaState struct {
 	Event            ProviderEvent    `json:"provider_event" mapstructure:"provider_event"`
