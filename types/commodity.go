@@ -31,8 +31,9 @@ type Provider interface {
 	Name() string
 	CreateInstance(Candidate *Instance) (*Instance, error)
 	DestroyInstance(i Instance) error
-	// Anywhere describeInstance is called, the entry in the db should be updated with the latest information
-	DescribeInstance(Instances []*Instance, filter string) error
+	// All DescribeInstance does is update the state of the instance
+	// in the db.
+	DescribeInstance(Instances []*Instance) error
 	// should encapsulate all events or state changes on the instance. Function that is used for state polling
 	// regularly, so keep efficiency in mind when designing for a provider.
 	GetInstanceStatus(i Instance) (*ProviderEvent, error)

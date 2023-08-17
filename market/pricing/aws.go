@@ -38,7 +38,7 @@ func GenAWSPricingModel() *AWSPricingModel {
 
 	// TODO - this might be a bug.
 	// Is it possible to get spot prices in other regions if the client is set to one here?
-	client, err := aws_helpers.MakeClient(&cfg.AWSConfig.EnabledRegions[0])
+	client, err := aws_helpers.MakeEC2Client(&cfg.AWSConfig.EnabledRegions[0])
 	if err != nil {
 		logger.Fatal().Err(err).Msg("could not create aws client")
 	}

@@ -107,7 +107,7 @@ func (l *LocalProvider) DestroyInstance(i cedana.Instance) error {
 	return nil
 }
 
-func (l *LocalProvider) DescribeInstance(Instances []*cedana.Instance, filter string) error {
+func (l *LocalProvider) DescribeInstance(Instances []*cedana.Instance) error {
 	return nil
 }
 

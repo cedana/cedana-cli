@@ -34,7 +34,6 @@ var SetupCmd = &cobra.Command{
 	Short: "Manually set up a launched instance with Cedana defaults and user-provided scripts",
 	Long:  "Provide commands to run on the remote instance in user_commands.yaml in the ~/.cedana config folder",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// ClientSetup takes a SpotInstance as input - match against the state file
 		db := db.NewDB()
 		l := utils.GetLogger()
 		jobFile, err := cedana.InitJobFile(jobFile)
@@ -68,7 +67,7 @@ func BuildInstanceSetup(i cedana.Instance, job cedana.Job) *InstanceSetup {
 
 	cfg, err := utils.InitCedanaConfig()
 	if err != nil {
-		l.Fatal().Err(err).Msg("could not load spot config")
+		l.Fatal().Err(err).Msg("could not load cedana config")
 	}
 
 	jobFile, err := cedana.InitJobFile(job.JobFilePath)
@@ -445,8 +444,8 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 		// wrap command in setsid so it can be checkpointed
 		// TODO: this is very hacky
 		if strings.Contains(task.C[0], "docker") {
-			// no need to setsid if this is a container 
-			// TODO NR: this needs to be overhauled (just assume user adds a detach) 
+			// no need to setsid if this is a container
+			// TODO NR: this needs to be overhauled (just assume user adds a detach)
 			*b = append(*b, task.C[0])
 
 		} else {
