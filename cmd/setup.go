@@ -400,7 +400,7 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStart=/usr/bin/cedana client daemon 
+ExecStart=/usr/bin/cedana client daemon
 Environment=CEDANA_JOB_ID=%s CEDANA_AUTH_TOKEN=%s CEDANA_CLIENT_ID=%s USER=%s
 Restart=on-failure
 
@@ -445,8 +445,8 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 		// wrap command in setsid so it can be checkpointed
 		// TODO: this is very hacky
 		if strings.Contains(task.C[0], "docker") {
-			// no need to setsid if this is a container 
-			// TODO NR: this needs to be overhauled (just assume user adds a detach) 
+			// no need to setsid if this is a container
+			// TODO NR: this needs to be overhauled (just assume user adds a detach)
 			*b = append(*b, task.C[0])
 
 		} else {
