@@ -10,12 +10,13 @@ import (
 
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/server"
-	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+
+	core "github.com/cedana/cedana/types"
 )
 
 // These flags need to be cleaned up, they're ugly
@@ -156,7 +157,7 @@ var listCheckpointsCmd = &cobra.Command{
 }
 
 func (c *Whisperer) sendCheckpointCommand(jobID string) {
-	serverCommand := types.ServerCommand{
+	serverCommand := core.ServerCommand{
 		Command: "checkpoint",
 	}
 	publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
@@ -213,21 +214,21 @@ func (c *Whisperer) sendRestoreCommand(jobID string, restoreFromLatest bool) err
 
 	if checkpointType == "" {
 		// assume checkpoint type is criu
-		checkpointType = string(types.CheckpointTypeCRIU)
+		checkpointType = string(core.CheckpointTypeCRIU)
 	}
 
-	if types.CheckpointType(checkpointType) == "" {
+	if core.CheckpointType(checkpointType) == "" {
 		return fmt.Errorf("could not parse provided checkpoint type %s", checkpointType)
 	}
 
 	publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	c.orch.PublishCommand(publishCtx, types.ServerCommand{
+	c.orch.PublishCommand(publishCtx, core.ServerCommand{
 		Command: "restore",
-		CedanaState: types.CedanaState{
+		CedanaState: core.CedanaState{
 			CheckpointPath: path,
-			CheckpointType: types.CheckpointType(checkpointType),
+			CheckpointType: core.CheckpointType(checkpointType),
 		},
 	})
 	return nil

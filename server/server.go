@@ -11,6 +11,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/rs/zerolog"
+
+	core "github.com/cedana/cedana/types"
 )
 
 type CedanaOrchestrator struct {
@@ -26,7 +28,7 @@ type CedanaOrchestrator struct {
 	wid string // worker id
 
 	// used to coordinate checkpoints across multiple goroutines
-	CmdChannel chan types.ServerCommand
+	CmdChannel chan core.ServerCommand
 }
 
 func (co *CedanaOrchestrator) AttachNewWorker(id string) {
@@ -37,7 +39,7 @@ func (co *CedanaOrchestrator) AttachNewWorker(id string) {
 func (co *CedanaOrchestrator) GenClientStateIterator(ctx context.Context) (jetstream.MessagesContext, error) {
 	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.state", co.jid, co.wid)
 	// create a consumer of client state
-	cons, err := co.js.AddConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
+	cons, err := co.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
 		AckPolicy:     jetstream.AckNonePolicy,
 		DeliverPolicy: jetstream.DeliverNewPolicy,
 		FilterSubject: strings.Join([]string{"CEDANA", co.jid, co.wid, "state"}, "."),
@@ -57,7 +59,7 @@ func (co *CedanaOrchestrator) GenClientStateIterator(ctx context.Context) (jetst
 func (co *CedanaOrchestrator) GenMetaStateIterator(ctx context.Context) (jetstream.MessagesContext, error) {
 	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.meta", co.jid, co.wid)
 	// create a consumer of meta state
-	cons, err := co.js.AddConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
+	cons, err := co.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
 		AckPolicy:     jetstream.AckNonePolicy,
 		DeliverPolicy: jetstream.DeliverNewPolicy,
 		FilterSubject: strings.Join([]string{"CEDANA", co.jid, co.wid, "meta"}, "."),
@@ -72,13 +74,13 @@ func (co *CedanaOrchestrator) GenMetaStateIterator(ctx context.Context) (jetstre
 	return iter, nil
 }
 
-func (co *CedanaOrchestrator) PublishCommand(ctx context.Context, command types.ServerCommand) {
+func (co *CedanaOrchestrator) PublishCommand(ctx context.Context, command core.ServerCommand) {
 	cmd, err := json.Marshal(command)
 	if err != nil {
 		co.logger.Fatal().Err(err).Msg("could not marshal command")
 	}
 
-	ackF, err := co.js.PublishAsync(ctx, strings.Join([]string{"CEDANA", co.jid, co.wid, "commands"}, "."), cmd)
+	ackF, err := co.js.PublishAsync(strings.Join([]string{"CEDANA", co.jid, co.wid, "commands"}, "."), cmd)
 	if err != nil {
 		co.logger.Info().Msgf("could not publish command with error %v", err)
 	}
@@ -122,9 +124,9 @@ func (co *CedanaOrchestrator) getLatestCheckpoint() (*string, error) {
 // run continuously, as a gofunction
 func (co *CedanaOrchestrator) ProcessClientState(stateIter jetstream.MessagesContext) {
 	for {
-		var state *types.CedanaState
+		var state *core.CedanaState
 		var stateBufferSize int = 10
-		stateBuffer := make([]*types.CedanaState, 0, stateBufferSize)
+		stateBuffer := make([]*core.CedanaState, 0, stateBufferSize)
 
 		for i := 0; i < stateBufferSize; i++ {
 			// We will always wait here. The speed at which we process messages is limited by speed at which
@@ -196,7 +198,7 @@ func (co *CedanaOrchestrator) ProcessMetaState(stateIter jetstream.MessagesConte
 			if lastState.Event.MarkedForTermination {
 				co.logger.Info().Msgf("instance %s marked for termination ... sending checkpoint", co.wid)
 				// client logics checkpointType
-				co.CmdChannel <- types.ServerCommand{
+				co.CmdChannel <- core.ServerCommand{
 					Command: "checkpoint",
 				}
 			}
@@ -252,7 +254,7 @@ func (co *CedanaOrchestrator) HeartbeatCheckpoint(heartbeatTicker *time.Ticker) 
 		// enters this and blocks until we get a message
 		case <-heartbeatTicker.C:
 			co.logger.Info().Msgf("sending heartbeat to client %s...", co.wid)
-			co.CmdChannel <- types.ServerCommand{
+			co.CmdChannel <- core.ServerCommand{
 				Command:   "checkpoint",
 				Heartbeat: true, // for cedana client to pre-dump? TODO NR
 			}
@@ -262,20 +264,20 @@ func (co *CedanaOrchestrator) HeartbeatCheckpoint(heartbeatTicker *time.Ticker) 
 
 // processes client state in batches to detect if an instance is idle
 // idling triggers a checkpoint + destruction of instance - this is experimental!
-func (co *CedanaOrchestrator) isInstanceIdle(stateBuffer []*types.CedanaState) {
+func (co *CedanaOrchestrator) isInstanceIdle(stateBuffer []*core.CedanaState) {
 	// fed a buffer of states
 	idle := false
 	if idle {
 		co.logger.Info().Msgf("instance %s identified as idle... sending checkpoint", co.wid)
 		// client logics checkpointType
-		co.CmdChannel <- types.ServerCommand{
+		co.CmdChannel <- core.ServerCommand{
 			Command: "checkpoint",
 		}
 	}
 }
 
 // TODO NR: Needs work
-func (co *CedanaOrchestrator) updateJobState(ctx context.Context, state *types.CedanaState) error {
+func (co *CedanaOrchestrator) updateJobState(ctx context.Context, state *core.CedanaState) error {
 	data, err := json.Marshal(*state)
 	if err != nil {
 		co.logger.Info().Msgf("could not marshal state: %v", err)
@@ -314,7 +316,7 @@ func NewOrchestrator(
 	}
 
 	// command channel
-	cmdChan := make(chan types.ServerCommand)
+	cmdChan := make(chan core.ServerCommand)
 
 	s := &CedanaOrchestrator{
 		logger: logger,
