@@ -184,7 +184,7 @@ func (p *Paperspace) DestroyInstance(i cedana.Instance) error {
 	return nil
 }
 
-func (p *Paperspace) DescribeInstance(instances []*cedana.Instance, filter string) error {
+func (p *Paperspace) DescribeInstance(instances []*cedana.Instance) error {
 	for _, i := range instances {
 		m, err := p.client.GetMachine(i.AllocatedID, paperspace.MachineGetParams{})
 		if err != nil {

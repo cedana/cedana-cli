@@ -27,6 +27,7 @@ type CedanaConfig struct {
 	// provider specific configurations
 	AWSConfig        AWSConfig        `json:"aws" mapstructure:"aws"`
 	PaperspaceConfig PaperspaceConfig `json:"paperspace" mapstructure:"paperspace"`
+	GCPConfig        GCPConfig        `json:"gcp" mapstructure:"gcp"`
 
 	Checkpoint    Checkpoint          `json:"checkpoint" mapstructure:"checkpoint"`
 	SharedStorage SharedStorageConfig `json:"shared_storage" mapstructure:"shared_storage"`
@@ -54,6 +55,11 @@ type PaperspaceConfig struct {
 	EnabledRegions []string `json:"enabled_regions" mapstructure:"enabled_regions"`
 	TemplateId     string   `json:"template_id" mapstructure:"template_id"`
 	User           string   `json:"user" mapstructure:"user"`
+}
+
+type GCPConfig struct {
+	ProjectID  string `json:"project_id" mapstructure:"project_id"`
+	SSHKeyPath string `json:"ssh_key_path" mapstructure:"ssh_key_path"`
 }
 
 type SharedStorageConfig struct {

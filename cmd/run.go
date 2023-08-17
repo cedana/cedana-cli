@@ -166,7 +166,7 @@ var showInstancesCmd = &cobra.Command{
 					instances[i] = &v
 				}
 				// this function updates in place
-				aws.DescribeInstance(instances, "")
+				aws.DescribeInstance(instances)
 			}
 			if provider == "paperspace" {
 				paperspace := r.providers["paperspace"]
@@ -176,7 +176,7 @@ var showInstancesCmd = &cobra.Command{
 					instances[i] = &v
 				}
 
-				paperspace.DescribeInstance(instances, "")
+				paperspace.DescribeInstance(instances)
 
 			}
 		}
@@ -470,7 +470,7 @@ func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*ceda
 		switch p := optimalInstance.Provider; p {
 		case "aws":
 			aws := r.providers["aws"]
-			err := aws.DescribeInstance([]*cedana.Instance{optimalInstance}, "")
+			err := aws.DescribeInstance([]*cedana.Instance{optimalInstance})
 			if err != nil {
 				// do nothing - describe could fail for any number of stupid reasons
 				continue
@@ -478,7 +478,7 @@ func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*ceda
 			time.Sleep(5 * time.Second)
 		case "paperspace":
 			paperspace := r.providers["paperspace"]
-			err := paperspace.DescribeInstance([]*cedana.Instance{optimalInstance}, "")
+			err := paperspace.DescribeInstance([]*cedana.Instance{optimalInstance})
 			if err != nil {
 				continue
 			}

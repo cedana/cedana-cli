@@ -145,7 +145,7 @@ func (b *Bootstrap) AWSBootstrap() {
 	// .aws/credentials check
 	// can't proceed w/ invalid creds
 	b.l.Info().Msg("checking for local aws credentials in env and ~/.aws/credentials..")
-	_, err = market.MakeClient(aws.String("us-east-1"), b.ctx)
+	_, err = market.MakeEC2Client(aws.String("us-east-1"), b.ctx)
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("Could not find credentials in env vars or shared configuration folder. Follow instructions here to set them up for your AWS account: https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html ")
 	}
@@ -268,7 +268,7 @@ func (b *Bootstrap) AzureBootstrap() {
 
 func (b *Bootstrap) CreateAWSKeyFile(region string) string {
 	keyName := "cedana-ssh"
-	client, err := market.MakeClient(aws.String(region), b.ctx)
+	client, err := market.MakeEC2Client(aws.String(region), b.ctx)
 	if err != nil {
 		b.l.Fatal().Err(err).Msg("error creating aws client")
 	}
@@ -366,7 +366,7 @@ func selectItems(selectedPos int, allItems []*item) ([]*item, error) {
 // with authentication and user support, we should be able to centralize some of this logic
 func (b *Bootstrap) createLaunchTemplates(regions []string, keyName string) error {
 	for _, region := range regions {
-		client, err := market.MakeClient(aws.String(region), b.ctx)
+		client, err := market.MakeEC2Client(aws.String(region), b.ctx)
 		if err != nil {
 			return err
 		}

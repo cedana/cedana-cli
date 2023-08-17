@@ -127,7 +127,7 @@ func AWSDescribeSpotInstanceRequests(c context.Context, api EC2API, input *ec2.D
 	return api.DescribeSpotInstanceRequests(c, input)
 }
 
-func MakeClient(region *string, ctx context.Context) (*ec2.Client, error) {
+func MakeEC2Client(region *string, ctx context.Context) (*ec2.Client, error) {
 
 	if region == nil {
 		// grab the last used region. TODO:Urgent: This is not ideal for cross-region stuff!
@@ -154,7 +154,7 @@ func GenSpotClient() *Spot {
 	}
 
 	// start with the first (0th) element in the config - it's reset anyway if something better is found
-	client, err := MakeClient(&config.AWSConfig.EnabledRegions[0], context.Background())
+	client, err := MakeEC2Client(&config.AWSConfig.EnabledRegions[0], context.Background())
 	if err != nil {
 		logger.Fatal().Err(err).Msg("could not instantiate AWS client")
 	}
@@ -336,15 +336,8 @@ func (s *Spot) isValidLaunchTemplateName(name string) bool {
 	}
 }
 
-func (s *Spot) DescribeInstance(instances []*cedana.Instance, filter string) error {
+func (s *Spot) DescribeInstance(instances []*cedana.Instance) error {
 	var f []types.Filter
-	if filter != "" {
-		f = append(f, types.Filter{
-			Name:   aws.String("instance-state-name"),
-			Values: []string{filter},
-		})
-	}
-
 	var ids []string
 	for _, i := range instances {
 		ids = append(ids, i.AllocatedID)
