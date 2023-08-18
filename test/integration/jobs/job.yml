@@ -2,7 +2,7 @@ instance_specs:
   memory_gb: 12
   cpu_cores: 2
   max_price_usd_hour: 0.2
-work_dir: ""
+work_dir: "../../../benchmarking/processes/loop"
 task:
   run:
     - "./loop"
