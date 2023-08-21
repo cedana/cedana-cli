@@ -38,7 +38,7 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 
 @test "Run job on instance" {
 
-  skip
+  # skip
   run ./cedana-cli run $YMLDIR/$YML > $BATS_TMPDIR/log_output.txt
   # Test passed if success signal is received
   [ "$status" -eq 0 ]
@@ -48,10 +48,9 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 
 @test "Check # of messages received on channel" {
 
-  JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs LIMIT 1;") && \
-  WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs LIMIT 1;") && \
-  DESERIALIZED_JSON=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instances | fromjson')
-  WORKER_ID=$(echo "$DESERIALIZED_JSON" | jq -r '.[0].instance_id')
+  JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
+  WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
+  WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
 
   # Define channels to subscribe to
   CHAN="CEDANA.${JOB_ID}.${WORKER_ID}.commands"
