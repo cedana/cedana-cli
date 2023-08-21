@@ -37,30 +37,11 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 }
 
 @test "Run job on instance" {
-  skip
-    run ./cedana-cli run $YML > $BATS_TMPDIR/log_output.txt
-
-    # Test passed if success signal is received
-    [ "$status" -eq 0 ]
-
-    echo $BATS_TMPDIR/log_output.txt
-}
-
-@test "Check job id" {
-  skip
-  # Read data from the database
-  JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT cedana_id FROM instances where tag='worker' LIMIT 1;")
-
-  [[ "$JOB_ID" -eq "cjeh2fivbi2uhe77c7bg" ]]
-
-}
-
-@test "Check worker id" {
-  skip
-  WORKER_ID=$(sqlite3 "$INSTANCES_DB" "SELECT allocated_id FROM instances where tag='worker' LIMIT 1;")
-
-  [[ "$WORKER_ID" -eq "i-0a3b2c1d2e3f4a5b6" ]]
-
+  # skip
+  run ./cedana-cli run $YMLDIR/$YML > $BATS_TMPDIR/log_output.txt
+  # Test passed if success signal is received
+  [ "$status" -eq 0 ]
+  echo $BATS_TMPDIR/log_output.txt
 }
 
 JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT cedana_id FROM instances where tag='worker' LIMIT 1;") && \
@@ -88,11 +69,12 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 
   # Count the matched lines in the log file
   COUNT=$(grep -c "$PATTERN" "$LOG_FILE")
+  echo $COUNT
   [[ "$COUNT" -eq 1 ]]
 }
 
 @test "Check # of running instances - before destroy" {
-  skip
+  # skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
@@ -114,7 +96,7 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 }
 
 @test "Check # of running instances - after destroy" {
-  skip
+  # skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
