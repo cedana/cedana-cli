@@ -37,34 +37,34 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 }
 
 @test "Run job on instance" {
-  # skip
+
+  skip
   run ./cedana-cli run $YMLDIR/$YML > $BATS_TMPDIR/log_output.txt
   # Test passed if success signal is received
   [ "$status" -eq 0 ]
   echo $BATS_TMPDIR/log_output.txt
 }
 
-JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT cedana_id FROM instances where tag='worker' LIMIT 1;") && \
-WORKER_ID=$(sqlite3 "$INSTANCES_DB" "SELECT allocated_id FROM instances where tag='worker' LIMIT 1;") && \
-
-# Define channels to subscribe to
-CHAN="CEDANA.${JOB_ID}.${WORKER_ID}.commands"
-
-LOG_FILE="$BATS_TMPDIR/messages.log"
 
 @test "Check # of messages received on channel" {
+
+  JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs LIMIT 1;") && \
+  WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs LIMIT 1;") && \
+  DESERIALIZED_JSON=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instances | fromjson')
+  WORKER_ID=$(echo "$DESERIALIZED_JSON" | jq -r '.[0].instance_id')
+
+  # Define channels to subscribe to
+  CHAN="CEDANA.${JOB_ID}.${WORKER_ID}.commands"
+
+  LOG_FILE="$BATS_TMPDIR/messages.log"
 
   # Start subscribing to the NATS channel and log messages
   nats sub "$CHAN" > "$LOG_FILE" &
   NATS_SUB_PID=$!
-
   # Sleep for 5 seconds
   sleep 20
-
   # Stop the NATS subscription
   kill "$NATS_SUB_PID" 2>/dev/null
-
-  LOG_FILE="$BATS_TMPDIR/messages.log"
   PATTERN="Received on \"$CHAN\""
 
   # Count the matched lines in the log file

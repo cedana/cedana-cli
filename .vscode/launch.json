@@ -12,7 +12,7 @@
             "mode": "debug",
             "program": "${workspaceFolder}",
             "console": "integratedTerminal",
-            "args": ["run", "job.yml"],
+            "args": ["run", "test/integration/jobs/job.yml"],
 
         },
        {

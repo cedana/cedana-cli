@@ -1,0 +1,201 @@
+[90m5:48PM[0m [32mINF[0m loading catalogs for enabled providers: aws
+[90m5:48PM[0m [32mINF[0m searching for optimal instance...
+[90m5:48PM[0m [32mINF[0m filtered using config: 6 instances
+[90m5:48PM[0m [32mINF[0m filtering on configured max price of 0.200000
+[90m5:48PM[0m [32mINF[0m filtered using max price: 3 instances
++----------+------------------+-------+----------+-----+-----------+-----------------+---------------+-----------+---------+
+| PROVIDER | ACCELERATOR NAME | VCPUS | RAM (GB) | GPU | GPU COUNT | TOTAL VRAM (GB) | INSTANCE TYPE |  REGION   |  PRICE  |
++----------+------------------+-------+----------+-----+-----------+-----------------+---------------+-----------+---------+
+| aws      |                  |     4 |       16 |     |         0 |               0 | t2.xlarge     | us-east-2 | 0.11490 |
++----------+------------------+-------+----------+-----+-----------+-----------------+---------------+-----------+---------+
+[90m5:48PM[0m [32mINF[0m found optimal instance...
+[90m5:48PM[0m [32mINF[0m setting up job...
+[90m5:48PM[0m [32mINF[0m trying to create instance in AWS region: us-east-2
+[90m5:48PM[0m [32mINF[0m creating fleet...
+[90m5:48PM[0m [32mINF[0m creating instance with id cjhujgivbi2tcccfsio0
+[90m5:48PM[0m [32mINF[0m waiting for instance to be ready...
+[90m5:48PM[0m [32mINF[0m running setup scripts...
+[90m5:49PM[0m [31mWRN[0m instance setup failed (attempt 1/5) with error: dial tcp 3.22.68.207:22: connect: connection refused. Retrying...
+[90m5:49PM[0m [32mINF[0m connection with remote instance established.
+[90m5:49PM[0m [32mINF[0m transferred work dir to remote instance.
+[90m5:49PM[0m [32mINF[0m Building first time config...
+[90m5:49PM[0m [1m???[0m 
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+[90m5:49PM[0m [1m???[0m Reading package lists...
+[90m5:49PM[0m [1m???[0m
+[90m5:49PM[0m [1m???[0m Building dependency tree...
+Reading state information...
+Suggested packages:
+  criu
+[90m5:49PM[0m [1m???[0m The following NEW packages will be installed:
+[90m5:49PM[0m [1m???[0m   cedana
+[90m5:49PM[0m [1m???[0m 0 upgraded, 1 newly installed, 0 to remove and 19 not upgraded.
+[90m5:49PM[0m [1m???[0m Need to get 0 B/5769 kB of archives.
+After this operation, 14.6 MB of additional disk space will be used.
+Get:1 /home/ubuntu/cedana_client.deb cedana amd64 0.6.8 [5769 kB]
+[90m5:49PM[0m [1m???[0m debconf: unable to initialize frontend: Dialog
+debconf: (Dialog frontend will not work on a dumb terminal, an emacs shell buffer, or without a controlling terminal.)
+debconf: falling back to frontend: Readline
+[90m5:49PM[0m [1m???[0m debconf: unable to initialize frontend: Readline
+debconf: (This frontend requires a controlling tty.)
+debconf: falling back to frontend: Teletype
+dpkg-preconfigure: unable to re-open stdin: 
+[90m5:49PM[0m [1m???[0m Selecting previously unselected package cedana.
+(Reading database ... 
+[90m5:49PM[0m [1m???[0m (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%
+[90m5:49PM[0m [1m???[0m (Reading database ... 55%
+[90m5:49PM[0m [1m???[0m (Reading database ... 60%
+[90m5:49PM[0m [1m???[0m (Reading database ... 65%
+[90m5:49PM[0m [1m???[0m (Reading database ... 70%
+[90m5:49PM[0m [1m???[0m (Reading database ... 75%
+[90m5:49PM[0m [1m???[0m (Reading database ... 80%
+[90m5:49PM[0m [1m???[0m (Reading database ... 85%
+[90m5:49PM[0m [1m???[0m (Reading database ... 90%
+[90m5:49PM[0m [1m???[0m (Reading database ... 95%
+[90m5:49PM[0m [1m???[0m (Reading database ... 100%(Reading database ... 71079 files and directories currently installed.)
+[90m5:49PM[0m [1m???[0m Preparing to unpack /home/ubuntu/cedana_client.deb ...
+[90m5:49PM[0m [1m???[0m Unpacking cedana (0.6.8) ...
+[90m5:49PM[0m [1m???[0m Setting up cedana (0.6.8) ...
+[90m5:49PM[0m [1m???[0m 
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+[90m5:50PM[0m [1m???[0m Get:1 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy InRelease [270 kB]
+[90m5:50PM[0m [1m???[0m Get:2 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease [119 kB]
+Get:3 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease [109 kB]
+Get:4 http://security.ubuntu.com/ubuntu jammy-security InRelease [110 kB]
+[90m5:50PM[0m [1m???[0m Get:5 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/main amd64 Packages [1395 kB]
+[90m5:50PM[0m [1m???[0m Get:6 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/main Translation-en [510 kB]
+[90m5:50PM[0m [1m???[0m Get:7 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/main amd64 c-n-f Metadata [30.3 kB]
+[90m5:50PM[0m [1m???[0m Get:8 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/restricted amd64 Packages [129 kB]
+[90m5:50PM[0m [1m???[0m Get:9 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/restricted Translation-en [18.6 kB]
+[90m5:50PM[0m [1m???[0m Get:10 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/restricted amd64 c-n-f Metadata [488 B]
+[90m5:50PM[0m [1m???[0m Get:11 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/universe amd64 Packages [14.1 MB]
+[90m5:50PM[0m [1m???[0m Get:12 https://ppa.launchpadcontent.net/criu/ppa/ubuntu jammy InRelease [18.0 kB]
+[90m5:50PM[0m [1m???[0m Get:13 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [680 kB]
+[90m5:50PM[0m [1m???[0m Get:14 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/universe Translation-en [5652 kB]
+[90m5:50PM[0m [1m???[0m Get:15 http://security.ubuntu.com/ubuntu jammy-security/main Translation-en [155 kB]
+[90m5:50PM[0m [1m???[0m Get:16 http://security.ubuntu.com/ubuntu jammy-security/main amd64 c-n-f Metadata [11.2 kB]
+Get:17 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [694 kB]
+[90m5:50PM[0m [1m???[0m Get:18 http://security.ubuntu.com/ubuntu jammy-security/restricted Translation-en [110 kB]
+[90m5:50PM[0m [1m???[0m Get:19 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 c-n-f Metadata [536 B]
+Get:20 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [770 kB]
+[90m5:50PM[0m [1m???[0m Get:21 http://security.ubuntu.com/ubuntu jammy-security/universe Translation-en [140 kB]
+[90m5:50PM[0m [1m???[0m Get:22 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 c-n-f Metadata [16.4 kB]
+[90m5:50PM[0m [1m???[0m Get:23 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/universe amd64 c-n-f Metadata [286 kB]
+[90m5:50PM[0m [1m???[0m Get:24 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/multiverse amd64 Packages [217 kB]
+[90m5:50PM[0m [1m???[0m Get:25 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/multiverse Translation-en [112 kB]
+[90m5:50PM[0m [1m???[0m Get:26 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/multiverse amd64 c-n-f Metadata [8372 B]
+[90m5:50PM[0m [1m???[0m Get:27 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [894 kB]
+[90m5:50PM[0m [1m???[0m Get:28 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en [214 kB]
+[90m5:50PM[0m [1m???[0m Get:29 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/main amd64 c-n-f Metadata [15.6 kB]
+[90m5:50PM[0m [1m???[0m Get:30 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages [714 kB]
+[90m5:50PM[0m [1m???[0m Get:31 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/restricted Translation-en [114 kB]
+[90m5:50PM[0m [1m???[0m Get:32 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 c-n-f Metadata [536 B]
+[90m5:50PM[0m [1m???[0m Get:33 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [969 kB]
+[90m5:50PM[0m [1m???[0m Get:34 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [36.5 kB]
+[90m5:50PM[0m [1m???[0m Get:35 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/universe Translation-en [211 kB]
+[90m5:50PM[0m [1m???[0m Get:36 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 c-n-f Metadata [21.5 kB]
+[90m5:50PM[0m [1m???[0m Get:37 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/multiverse amd64 Packages [41.6 kB]
+[90m5:50PM[0m [1m???[0m Get:38 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/multiverse Translation-en [9768 B]
+[90m5:50PM[0m [1m???[0m Get:39 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/multiverse amd64 c-n-f Metadata [476 B]
+[90m5:50PM[0m [1m???[0m Get:40 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/main amd64 Packages [40.8 kB]
+[90m5:50PM[0m [1m???[0m Get:41 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/main Translation-en [10.2 kB]
+Get:42 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/main amd64 c-n-f Metadata [388 B]
+Get:43 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/restricted amd64 c-n-f Metadata [116 B]
+Get:44 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/universe amd64 Packages [22.3 kB]
+[90m5:50PM[0m [1m???[0m Get:45 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/universe Translation-en [15.4 kB]
+[90m5:50PM[0m [1m???[0m Get:46 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/universe amd64 c-n-f Metadata [576 B]
+[90m5:50PM[0m [1m???[0m Get:47 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports/multiverse amd64 c-n-f Metadata [116 B]
+[90m5:50PM[0m [1m???[0m Get:48 http://security.ubuntu.com/ubuntu jammy-security/multiverse Translation-en [7060 B]
+[90m5:50PM[0m [1m???[0m Get:49 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 c-n-f Metadata [260 B]
+[90m5:50PM[0m [1m???[0m Get:50 https://ppa.launchpadcontent.net/criu/ppa/ubuntu jammy/main amd64 Packages [536 B]
+[90m5:50PM[0m [1m???[0m Get:51 https://ppa.launchpadcontent.net/criu/ppa/ubuntu jammy/main Translation-en [208 B]
+[90m5:50PM[0m [1m???[0m Fetched 29.0 MB in 4s (6871 kB/s)
+Reading package lists...
+[90m5:50PM[0m [1m???[0m
+[90m5:50PM[0m [1m???[0m Repository: 'deb https://ppa.launchpadcontent.net/criu/ppa/ubuntu/ jammy main'
+More info: https://launchpad.net/~criu/+archive/ubuntu/ppa
+Adding repository.
+Adding deb entry to /etc/apt/sources.list.d/criu-ubuntu-ppa-jammy.list
+Adding disabled deb-src entry to /etc/apt/sources.list.d/criu-ubuntu-ppa-jammy.list
+Adding key to /etc/apt/trusted.gpg.d/criu-ubuntu-ppa.gpg with fingerprint 4E2A48715C45AEEC077B48169B29EEC9246B6CE2
+[90m5:50PM[0m [1m???[0m Hit:1 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-backports InRelease
+[90m5:50PM[0m [1m???[0m Hit:4 http://security.ubuntu.com/ubuntu jammy-security InRelease
+[90m5:50PM[0m [1m???[0m Hit:5 https://ppa.launchpadcontent.net/criu/ppa/ubuntu jammy InRelease
+[90m5:50PM[0m [1m???[0m Reading package lists...
+[90m5:50PM[0m [1m???[0m
+[90m5:50PM[0m [1m???[0m Reading package lists...
+[90m5:50PM[0m [1m???[0m
+[90m5:50PM[0m [1m???[0m Building dependency tree...
+[90m5:50PM[0m [1m???[0m 
+Reading state information...
+[90m5:50PM[0m [1m???[0m
+[90m5:50PM[0m [1m???[0m The following additional packages will be installed:
+  libnet1 libprotobuf-c1 libprotobuf23 python3-protobuf
+The following NEW packages will be installed:
+  criu libnet1 libprotobuf-c1 libprotobuf23 python3-protobuf
+[90m5:50PM[0m [1m???[0m 0 upgraded, 5 newly installed, 0 to remove and 132 not upgraded.
+Need to get 2044 kB of archives.
+After this operation, 9788 kB of additional disk space will be used.
+Get:1 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libprotobuf23 amd64 3.12.4-1ubuntu7.22.04.1 [877 kB]
+[90m5:50PM[0m [1m???[0m Get:2 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3-protobuf amd64 3.12.4-1ubuntu7.22.04.1 [357 kB]
+[90m5:50PM[0m [1m???[0m Get:3 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy/main amd64 libnet1 amd64 1.1.6+dfsg-3.1build3 [46.9 kB]
+[90m5:50PM[0m [1m???[0m Get:4 http://us-east-2.ec2.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libprotobuf-c1 amd64 1.3.3-1ubuntu2.1 [20.3 kB]
+[90m5:50PM[0m [1m???[0m Get:5 https://ppa.launchpadcontent.net/criu/ppa/ubuntu jammy/main amd64 criu amd64 3.17.1-1ppa1.22.04 [743 kB]
+[90m5:50PM[0m [1m???[0m Fetched 2044 kB in 1s (2194 kB/s)
+Selecting previously unselected package libprotobuf23:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%
+[90m5:50PM[0m [1m???[0m debconf: unable to initialize frontend: Dialog
+debconf: (Dialog frontend will not work on a dumb terminal, an emacs shell buffer, or without a controlling terminal.)
+debconf: falling back to frontend: Readline
+[90m5:50PM[0m [1m???[0m debconf: unable to initialize frontend: Readline
+debconf: (This frontend requires a controlling tty.)
+debconf: falling back to frontend: Teletype
+dpkg-preconfigure: unable to re-open stdin: 
+[90m5:50PM[0m [1m???[0m (Reading database ... 70%
+[90m5:50PM[0m [1m???[0m (Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 71080 files and directories currently installed.)
+Preparing to unpack .../libprotobuf23_3.12.4-1ubuntu7.22.04.1_amd64.deb ...
+[90m5:50PM[0m [1m???[0m Unpacking libprotobuf23:amd64 (3.12.4-1ubuntu7.22.04.1) ...
+[90m5:50PM[0m [1m???[0m Selecting previously unselected package python3-protobuf.
+Preparing to unpack .../python3-protobuf_3.12.4-1ubuntu7.22.04.1_amd64.deb ...
+Unpacking python3-protobuf (3.12.4-1ubuntu7.22.04.1) ...
+[90m5:50PM[0m [1m???[0m Selecting previously unselected package libnet1:amd64.
+[90m5:50PM[0m [1m???[0m Preparing to unpack .../libnet1_1.1.6+dfsg-3.1build3_amd64.deb ...
+Unpacking libnet1:amd64 (1.1.6+dfsg-3.1build3) ...
+[90m5:50PM[0m [1m???[0m Selecting previously unselected package libprotobuf-c1:amd64.
+[90m5:50PM[0m [1m???[0m Preparing to unpack .../libprotobuf-c1_1.3.3-1ubuntu2.1_amd64.deb ...
+[90m5:50PM[0m [1m???[0m Unpacking libprotobuf-c1:amd64 (1.3.3-1ubuntu2.1) ...
+[90m5:50PM[0m [1m???[0m Selecting previously unselected package criu.
+[90m5:50PM[0m [1m???[0m Preparing to unpack .../criu_3.17.1-1ppa1.22.04_amd64.deb ...
+[90m5:50PM[0m [1m???[0m Unpacking criu (3.17.1-1ppa1.22.04) ...
+[90m5:50PM[0m [1m???[0m Setting up libprotobuf23:amd64 (3.12.4-1ubuntu7.22.04.1) ...
+[90m5:50PM[0m [1m???[0m Setting up libnet1:amd64 (1.1.6+dfsg-3.1build3) ...
+[90m5:50PM[0m [1m???[0m Setting up libprotobuf-c1:amd64 (1.3.3-1ubuntu2.1) ...
+[90m5:50PM[0m [1m???[0m Setting up python3-protobuf (3.12.4-1ubuntu7.22.04.1) ...
+[90m5:50PM[0m [1m???[0m Setting up criu (3.17.1-1ppa1.22.04) ...
+[90m5:50PM[0m [1m???[0m Processing triggers for man-db (2.10.2-1) ...
+[90m5:50PM[0m [1m???[0m Processing triggers for libc-bin (2.35-0ubuntu3.1) ...
+[90m5:50PM[0m [1m???[0m 
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+[90m5:50PM[0m [1m???[0m {"cedana_managed":true,"client":{"process_name":"./loop","leave_running":true,"signal_process_pre_dump":false,"signal_process_timeout":0},"action_scripts":{"pre_dump":"","post_dump":"","pre_restore":""},"connection":{"nats_url":"demo.nats.io","nats_port":8222,"auth_token":""},"docker":{"leave_running":false,"container_name":"","checkpoint_id":""},"shared_storage":{"mount_point":"","dump_storage_dir":"~/.cedana/dump"}}
+[90m5:50PM[0m [1m???[0m bash: line 1: cd: ../cedana/benchmarking/processes/loop: No such file or directory
+[90m5:50PM[0m [1m???[0m Created symlink /etc/systemd/system/multi-user.target.wants/cedana.service → /etc/systemd/system/cedana.service.
+[90m5:50PM[0m [32mINF[0m creating instance with id cjhukeavbi2tcccfsiog
