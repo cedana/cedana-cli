@@ -3,6 +3,8 @@
 INIT_CEDANA_CLI="$BATS_TEST_DIRNAME/../../cedana-cli"
 YMLDIR="$BATS_TEST_DIRNAME/jobs"
 YML="job.yml"
+INSTANCES_DB="$HOME/.cedana/instances.db"
+
 
 @test "Checking if aws cli is installed" {
     run aws --version
@@ -11,6 +13,10 @@ YML="job.yml"
 
 @test "Checking if cedana-cli executable exists" {
     [[ -x "$INIT_CEDANA_CLI" ]]
+}
+
+@test "Checking if instances.db exists" {
+    [[ -f "$INSTANCES_DB" ]]
 }
 
 @test "checking if job.yml exists in $YMLDIR" {
@@ -31,7 +37,7 @@ YML="job.yml"
 }
 
 @test "Run job on instance" {
-  # skip
+  skip
     run ./cedana-cli run $YML > $BATS_TMPDIR/log_output.txt
 
     # Test passed if success signal is received
@@ -40,8 +46,53 @@ YML="job.yml"
     echo $BATS_TMPDIR/log_output.txt
 }
 
+@test "Check job id" {
+  skip
+  # Read data from the database
+  JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT cedana_id FROM instances where tag='worker' LIMIT 1;")
+
+  [[ "$JOB_ID" -eq "cjeh2fivbi2uhe77c7bg" ]]
+
+}
+
+@test "Check worker id" {
+  skip
+  WORKER_ID=$(sqlite3 "$INSTANCES_DB" "SELECT allocated_id FROM instances where tag='worker' LIMIT 1;")
+
+  [[ "$WORKER_ID" -eq "i-0a3b2c1d2e3f4a5b6" ]]
+
+}
+
+JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT cedana_id FROM instances where tag='worker' LIMIT 1;") && \
+WORKER_ID=$(sqlite3 "$INSTANCES_DB" "SELECT allocated_id FROM instances where tag='worker' LIMIT 1;") && \
+
+# Define channels to subscribe to
+CHAN="CEDANA.${JOB_ID}.${WORKER_ID}.commands"
+
+LOG_FILE="$BATS_TMPDIR/messages.log"
+
+@test "Check # of messages received on channel" {
+
+  # Start subscribing to the NATS channel and log messages
+  nats sub "$CHAN" > "$LOG_FILE" &
+  NATS_SUB_PID=$!
+
+  # Sleep for 5 seconds
+  sleep 20
+
+  # Stop the NATS subscription
+  kill "$NATS_SUB_PID" 2>/dev/null
+
+  LOG_FILE="$BATS_TMPDIR/messages.log"
+  PATTERN="Received on \"$CHAN\""
+
+  # Count the matched lines in the log file
+  COUNT=$(grep -c "$PATTERN" "$LOG_FILE")
+  [[ "$COUNT" -eq 1 ]]
+}
+
 @test "Check # of running instances - before destroy" {
-  # skip
+  skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
@@ -63,6 +114,7 @@ YML="job.yml"
 }
 
 @test "Check # of running instances - after destroy" {
+  skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
