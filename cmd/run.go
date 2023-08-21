@@ -103,6 +103,35 @@ var runCmd = &cobra.Command{
 	},
 }
 
+var integrationCmd = &cobra.Command{
+	Use:   "run integration",
+	Short: "Integration tests",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := buildRunner()
+		defer r.cleanRunner()
+
+		jobFile, err := cedana.InitJobFile(args[0])
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not set up cedana job")
+		}
+		r.jobFile = jobFile
+
+		r.job = r.db.CreateJob(r.jobFile)
+
+		// TODO NR - expand later to bring in managed service
+		if r.cfg.SelfServe {
+			err = r.runJobSelfServe(true)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		return nil
+	},
+}
+
 var retryCmd = &cobra.Command{
 	Use:   "retry",
 	Short: "Retry a failed setup from jobID [job-id]",
@@ -378,7 +407,7 @@ func (r *Runner) restoreJob(jobID string) error {
 Runs a job for the self serve model of Cedana.
 We don't deploy an orchestrator to the cloud (instead we run it locally in a daemon) and pass through our NATS.
 */
-func (r *Runner) runJobSelfServe() error {
+func (r *Runner) runJobSelfServe(isTest ...bool) error {
 	candidates := market.Optimize(r.jobFile)
 	err := r.SetupNATSForJob()
 	if err != nil {
@@ -413,7 +442,7 @@ func (r *Runner) runJobSelfServe() error {
 	// daemon has a separate instance of the runner - should we be passing
 	// self to it? TODO NR, probably some perf gains here
 	cd := NewCLIDaemon()
-	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID)
+	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID, true)
 
 	return nil
 }
@@ -724,6 +753,7 @@ func prettyPrintInstances(instances []cedana.Instance) {
 func init() {
 	showInstancesCmd.Flags().BoolVarP(&showOnlyRunning, "running", "r", false, "Show only running instances")
 	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(integrationCmd)
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(showInstancesCmd)
 	rootCmd.AddCommand(destroyAllCmd)

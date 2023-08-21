@@ -99,7 +99,7 @@ func NewCLIDaemon() *CLIDaemon {
 	}
 }
 
-func (cd *CLIDaemon) Start(orchestratorID string, jobID string, clientID string) {
+func (cd *CLIDaemon) Start(orchestratorID string, jobID string, clientID string, isTest ...bool) {
 	opts := []nats.Option{nats.Name(fmt.Sprintf("Cedana orchestrator %s", "cedana_orchestrator"))}
 	opts = setupConnOptions(opts, cd.logger)
 
