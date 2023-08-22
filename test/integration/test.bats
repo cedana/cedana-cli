@@ -78,7 +78,7 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
   [[ "$COUNT" -eq 3 ]]
 }
 
-@test "Testing check pointing" {
+@test "Testing checkpointing" {
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -108,6 +108,38 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 
 
   [[ "$COUNT" -eq 3 || "$COUNT" -eq 4 || "$COUNT" -eq 5 || "$COUNT" -eq 6 ]]
+
+  run grep -q '"checkpoint_state":"CHECKPOINT_FAILED"' log_file.txt
+}
+
+@test "Testing whisper restore" {
+  JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
+  WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
+  WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
+
+  # Define channels to subscribe to
+  CHAN="CEDANA.${JOB_ID}.${WORKER_ID}.state"
+
+  LOG_FILE="$BATS_TMPDIR/messages.log"
+  # Start subscribing to the NATS channel and log messages
+  nats sub "$CHAN" > "$LOG_FILE" &
+  NATS_SUB_PID=$!
+
+  JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
+  run ./cedana-cli whisper restore -j $JOB_ID -l
+
+  sleep 5
+  # Stop the NATS subscription
+  kill "$NATS_SUB_PID" 2>/dev/null
+  PATTERN="Received on \"$CHAN\""
+
+  # Count the matched lines in the log file
+  COUNT=$(grep -c "$PATTERN" "$LOG_FILE")
+  echo $COUNT
+  echo $LOG_FILE
+
+
+  [[ "$status" -eq 0 ]]
 }
 
 @test "Check # of running instances - before destroy" {

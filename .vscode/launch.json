@@ -15,6 +15,16 @@
             "args": ["run", "test/integration/jobs/job.yml"],
 
         },
+        {
+            "name": "sudo debug cedana-cli whisper restore",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "args": ["whisper", "restore", "-j", "cjigihavbi2i8gns57g0"],
+
+        },
        {
             "name": "debug cedana-cli bootstrap",
             "type": "go",

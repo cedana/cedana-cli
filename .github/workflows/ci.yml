@@ -12,6 +12,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CI: true
     steps:
       - uses: actions/checkout@v3
 
@@ -35,6 +37,7 @@ jobs:
           cd bats-core
           ./install.sh /usr/local
           cd ..
+
       - name: Run Bats Tests
         run: |
           bats test/integration/test.bats
