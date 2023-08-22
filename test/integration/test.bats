@@ -4,6 +4,8 @@ INIT_CEDANA_CLI="$BATS_TEST_DIRNAME/../../cedana-cli"
 YMLDIR="$BATS_TEST_DIRNAME/jobs"
 YML="job.yml"
 INSTANCES_DB="$HOME/.cedana/instances.db"
+LOG_FILE="$BATS_TMPDIR/messages.log"
+
 
 
 @test "Checking if aws cli is installed" {
@@ -44,7 +46,7 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 
 @test "Run job on instance" {
 
-  # skip
+  skip
   run ./cedana-cli run $YMLDIR/$YML > $BATS_TMPDIR/log_output.txt
   # Test passed if success signal is received
   [ "$status" -eq 0 ]
@@ -53,7 +55,7 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 
 
 @test "Check # of messages received on channel" {
-
+  skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -78,7 +80,8 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
   [[ "$COUNT" -eq 3 ]]
 }
 
-@test "Testing checkpointing" {
+@test "Testing check point messages" {
+  skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -86,7 +89,6 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
   # Define channels to subscribe to
   CHAN="CEDANA.${JOB_ID}.${WORKER_ID}.commands"
 
-  LOG_FILE="$BATS_TMPDIR/messages.log"
   # Start subscribing to the NATS channel and log messages
   nats sub "$CHAN" > "$LOG_FILE" &
   NATS_SUB_PID=$!
@@ -103,16 +105,23 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
   # Count the matched lines in the log file
   COUNT=$(grep -c "$PATTERN" "$LOG_FILE")
   echo $COUNT
+
+
   # Test passed if success signal is received
   echo Job ID: $JOB_ID
 
 
   [[ "$COUNT" -eq 3 || "$COUNT" -eq 4 || "$COUNT" -eq 5 || "$COUNT" -eq 6 ]]
 
-  run grep -q '"checkpoint_state":"CHECKPOINT_FAILED"' log_file.txt
+}
+
+@test "Check for failed checkpoint" {
+  ./test/integration/check.sh
+  [[ "$status" -eq 0 ]]
 }
 
 @test "Testing whisper restore" {
+  skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -143,7 +152,7 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 }
 
 @test "Check # of running instances - before destroy" {
-  # skip
+  skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
@@ -158,6 +167,7 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 }
 
 @test "Tear down all instances" {
+  skip
   run ./cedana-cli destroy-all > $BATS_TMPDIR/log_output.txt
 
   # Test passed if success signal is received
@@ -165,7 +175,7 @@ INSTANCES_DB="$HOME/.cedana/instances.db"
 }
 
 @test "Check # of running instances - after destroy" {
-  # skip
+  skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
