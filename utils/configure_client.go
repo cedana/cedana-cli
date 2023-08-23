@@ -2,44 +2,11 @@ package utils
 
 import (
 	cedana "github.com/cedana/cedana-cli/types"
+	core "github.com/cedana/cedana/utils"
 )
 
-type ConfigClient struct {
-	CedanaManaged bool          `json:"cedana_managed" mapstructure:"cedana_managed"`
-	Client        Client        `json:"client" mapstructure:"client"`
-	ActionScripts ActionScripts `json:"action_scripts" mapstructure:"action_scripts"`
-	Connection    Connection    `json:"connection" mapstructure:"connection"`
-	Docker        Docker        `json:"docker" mapstructure:"docker"`
-	SharedStorage SharedStorage `json:"shared_storage" mapstructure:"shared_storage"`
-}
-
-type Client struct {
-	ProcessName          string `json:"process_name" mapstructure:"process_name"`
-	LeaveRunning         bool   `json:"leave_running" mapstructure:"leave_running"`
-	SignalProcessPreDump bool   `json:"signal_process_pre_dump" mapstructure:"signal_process_pre_dump"`
-	SignalProcessTimeout int    `json:"signal_process_timeout" mapstructure:"signal_process_timeout"`
-}
-
-type ActionScripts struct {
-	PreDump    string `json:"pre_dump" mapstructure:"pre_dump"`
-	PostDump   string `json:"post_dump" mapstructure:"post_dump"`
-	PreRestore string `json:"pre_restore" mapstructure:"pre_restore"`
-}
-
-type Docker struct {
-	LeaveRunning  bool   `json:"leave_running" mapstructure:"leave_running"`
-	ContainerName string `json:"container_name" mapstructure:"container_name"`
-	CheckpointID  string `json:"checkpoint_id" mapstructure:"checkpoint_id"`
-}
-
-type SharedStorage struct {
-	// only useful for multi-machine checkpoint/restore
-	MountPoint     string `json:"mount_point" mapstructure:"mount_point"`
-	DumpStorageDir string `json:"dump_storage_dir" mapstructure:"dump_storage_dir"`
-}
-
-// client config builder
-func BuildClientConfig(jobFile *cedana.JobFile) *ConfigClient {
+// Used to passthrough cedana configuration to the daemon
+func BuildClientConfig(jobFile *cedana.JobFile) *core.Config {
 	logger := GetLogger()
 
 	cfg, err := InitCedanaConfig()
@@ -52,24 +19,24 @@ func BuildClientConfig(jobFile *cedana.JobFile) *ConfigClient {
 		dir = "~/.cedana/"
 	}
 
-	c := &ConfigClient{
+	c := &core.Config{
 		CedanaManaged: true,
-		Client: Client{
+		Client: core.Client{
 			LeaveRunning: true, // minimally invasive
 		},
-		Connection: Connection{
-			NATSUrl:   cfg.Connection.NATSUrl,
-			NATSPort:  cfg.Connection.NATSPort,
-			AuthToken: cfg.Connection.AuthToken,
+		Connection: core.Connection{
+			NATSUrl:       cfg.Connection.NATSUrl,
+			NATSPort:      cfg.Connection.NATSPort,
+			NATSAuthToken: cfg.Connection.AuthToken,
 		},
-		SharedStorage: SharedStorage{
+		SharedStorage: core.SharedStorage{
 			MountPoint:     cfg.SharedStorage.MountPoint,
 			DumpStorageDir: cfg.SharedStorage.DumpStorageDir,
 		},
 	}
 
 	if jobFile.Task.C != nil {
-		c.Client.ProcessName = jobFile.Task.C[0]
+		c.Client.Task = jobFile.Task.C[0]
 	}
 	return c
 }
