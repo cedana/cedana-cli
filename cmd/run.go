@@ -12,7 +12,6 @@ import (
 
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/market"
-	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -22,6 +21,7 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	cedana "github.com/cedana/cedana-cli/types"
+	core "github.com/cedana/cedana/types"
 )
 
 type Runner struct {
@@ -292,11 +292,11 @@ func (r *Runner) retryJob(worker cedana.Instance) error {
 
 	if err != nil {
 		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", worker.CedanaID, "yourjob.yml")
-		r.db.UpdateJobState(r.job, types.JobStateSetupFailed)
+		r.db.UpdateJobState(r.job, core.JobSetupFailed)
 		return err
 	}
 
-	r.db.UpdateJobState(r.job, types.JobStateRunning)
+	r.db.UpdateJobState(r.job, core.JobRunning)
 
 	// job is orchestrated by a local worker
 	orch, err := r.db.CreateInstance(&cedana.Instance{
@@ -387,7 +387,7 @@ func (r *Runner) runJobSelfServe() error {
 	}
 
 	r.logger.Info().Msg("setting up job...")
-	r.db.UpdateJobState(r.job, types.JobStatePending)
+	r.db.UpdateJobState(r.job, core.JobPending)
 
 	worker, err := r.deployWorker(candidates, true)
 	if err != nil {
@@ -496,11 +496,11 @@ func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*ceda
 
 	if err != nil {
 		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", optimalInstance.AllocatedID, "yourjob.yml")
-		r.db.UpdateJobState(r.job, types.JobStateSetupFailed)
+		r.db.UpdateJobState(r.job, core.JobSetupFailed)
 		return nil, err
 	}
 
-	r.db.UpdateJobState(r.job, types.JobStateRunning)
+	r.db.UpdateJobState(r.job, core.JobRunning)
 	return optimalInstance, nil
 }
 

@@ -149,7 +149,7 @@ func (co *CedanaOrchestrator) ProcessClientState(stateIter jetstream.MessagesCon
 
 			if state != nil {
 				stateBuffer = append(stateBuffer, state)
-				if state.CheckpointState != "" {
+				if state.Flag != "" || state.CheckpointState != "" {
 					err := co.updateJobState(context.Background(), state)
 					if err != nil {
 						co.logger.Info().Msgf("could not update job state: %v", err)
@@ -276,7 +276,9 @@ func (co *CedanaOrchestrator) isInstanceIdle(stateBuffer []*core.CedanaState) {
 	}
 }
 
-// TODO NR: Needs work
+// Pushes the job state to NATS, which (right now) gets received by a subscriber running on the
+// daemon. This is a workaround - ideally the daemon running on the client machine can also just pick up
+// the client state and work with it.
 func (co *CedanaOrchestrator) updateJobState(ctx context.Context, state *core.CedanaState) error {
 	data, err := json.Marshal(*state)
 	if err != nil {

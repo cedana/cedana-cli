@@ -11,6 +11,8 @@ import (
 	"github.com/rs/xid"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
+
+	core "github.com/cedana/cedana/types"
 )
 
 type DB struct {
@@ -197,7 +199,7 @@ func (db *DB) AttachInstanceToJob(job *types.Job, instance types.Instance) {
 	db.UpdateJob(job)
 }
 
-func (db *DB) UpdateJobState(job *types.Job, state types.JobState) error {
+func (db *DB) UpdateJobState(job *types.Job, state core.Flag) error {
 	cj := db.GetJob(job.JobID)
 	if cj != nil {
 		cj.State = state
