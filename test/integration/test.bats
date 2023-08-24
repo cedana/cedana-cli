@@ -46,7 +46,7 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 
 @test "Run job on instance" {
 
-  skip
+  # skip
   run ./cedana-cli run $YMLDIR/$YML > $BATS_TMPDIR/log_output.txt
   # Test passed if success signal is received
   [ "$status" -eq 0 ]
@@ -55,7 +55,7 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 
 
 @test "Check # of messages received on channel" {
-  skip
+  # skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -81,7 +81,7 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 }
 
 @test "Testing check point messages" {
-  skip
+  # skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -121,7 +121,7 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 }
 
 @test "Testing whisper restore" {
-  skip
+  # skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -147,12 +147,15 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
   echo $COUNT
   echo $LOG_FILE
 
-
+  [[ "$COUNT" -eq 1 ]]
   [[ "$status" -eq 0 ]]
 }
+# Add check for successful restore msg
+
+# Add check for failed restore msg
 
 @test "Check # of running instances - before destroy" {
-  skip
+  # skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
@@ -167,7 +170,7 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 }
 
 @test "Tear down all instances" {
-  skip
+  # skip
   run ./cedana-cli destroy-all > $BATS_TMPDIR/log_output.txt
 
   # Test passed if success signal is received
@@ -175,7 +178,7 @@ LOG_FILE="$BATS_TMPDIR/messages.log"
 }
 
 @test "Check # of running instances - after destroy" {
-  skip
+  # skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
