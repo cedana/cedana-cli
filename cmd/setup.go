@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/cedana/cedana-cli/db"
 	cedana "github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
+	scp "github.com/povsister/scp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -460,7 +460,6 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 }
 
 func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
-	// TODO NR: we really should be using this: https://github.com/bramvdbogaerde/go-scp
 	var keyPath string
 	var user string
 
@@ -480,34 +479,27 @@ func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 		keyPath = is.cfg.PaperspaceConfig.SSHKeyPath
 	}
 
-	_, err := os.ReadFile(keyPath)
+	keyBytes, err := os.ReadFile(keyPath)
 	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error loading keyfile to ssh into instance")
+		is.logger.Fatal().Err(err).Msg("error loading keyfile to scp data to instance")
+		return err
+	}
+	config, err := scp.NewSSHConfigFromPrivateKey(user, keyBytes)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error creating config from key file")
 		return err
 	}
 
-	// since this is first to execute, we want to attempt connections the same way
-	// we do in createConn
-	conn, err := is.CreateConn()
+	client, err := scp.NewClient(is.instance.IPAddress, config, &scp.ClientOption{})
 	if err != nil {
+		is.logger.Fatal().Err(err).Msg("couldn't establish a connection to the remote server")
 		return err
 	}
-	is.logger.Info().Msg("connection with remote instance established.")
-	conn.Close()
-
-	scpCmd := exec.Command(
-		"scp", "-r", "-i", keyPath,
-		"-o", "StrictHostKeyChecking=no", // another security hazard, also goes away
-		"-o", "IdentitiesOnly=yes", // security hazard, but goes away once we use a go solution
-		workDirPath,
-		fmt.Sprintf("%s@%s:%s", user, is.instance.IPAddress, "."),
-	)
-
-	scpCmd.Stdout = os.Stdout
-	scpCmd.Stderr = os.Stderr
-
-	err = scpCmd.Run()
+	defer client.Close()
+	
+	err = client.CopyDirToRemote(workDirPath, ".", &scp.DirTransferOption{})
 	if err != nil {
+		is.logger.Fatal().Err(err).Msg("couldn't copy local directory to instance")
 		return err
 	}
 
