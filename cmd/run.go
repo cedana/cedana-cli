@@ -120,27 +120,48 @@ var retryCmd = &cobra.Command{
 		}
 
 		r.job = job
-		// pull worker ID out
 
-		attachedInstanceIDs, err := job.GetInstanceIds()
-		if err != nil {
-			return err
-		}
-
-		var worker cedana.Instance
-
-		// this should be way better. ideally the spun up instances themselves
-		// should have
-		for _, i := range attachedInstanceIDs {
-			instance := r.db.GetInstanceByCedanaID(i.InstanceID)
-			if instance.Tag == "worker" {
-				worker = instance
+		switch job.State {
+		case core.JobSetupFailed:
+			attachedInstanceIDs, err := job.GetInstanceIds()
+			if err != nil {
+				return err
 			}
-		}
 
-		err = r.retryJob(worker)
-		if err != nil {
-			return err
+			var worker cedana.Instance
+
+			for _, i := range attachedInstanceIDs {
+				instance := r.db.GetInstanceByCedanaID(i.InstanceID)
+				if instance.Tag == "worker" {
+					worker = instance
+				}
+			}
+
+			err = r.retryJob(worker)
+			if err != nil {
+				return err
+			}
+
+		case core.JobStartupFailed:
+			// client is waiting for a retry command.
+			// user knows job failed due to incorrect setup (can check the jobtable)
+			// not ideal, good for now
+
+			// setup is complete, just resend task as a recovery command
+			w, err := NewWhisperer(job.JobID)
+			if err != nil {
+				return err
+			}
+
+			jobFile, err := cedana.InitJobFile(r.job.JobFilePath)
+			if err != nil {
+				r.logger.Fatal().Err(err).Msg("could not set up cedana job")
+			}
+
+			err = w.sendRetryCommand(jobFile)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
