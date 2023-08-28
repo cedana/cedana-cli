@@ -45,4 +45,4 @@ jobs:
 
       - name: Run Bats Tests
         run: |
-          bats test/integration/test.bats
+          ./bats/bin/bats test/integration/test.bats
