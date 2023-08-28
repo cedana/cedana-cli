@@ -147,6 +147,13 @@ func (is *InstanceSetup) CreateConn() (*ssh.Client, error) {
 // Runs cedana-specific and user-specified instantiation scripts for a client instance in an SSH session.
 func (is *InstanceSetup) ClientSetup(runTask bool) error {
 
+	//create connection first (and retry) beforehand
+	conn, err := is.CreateConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
 	// copy workdir if specified and exists
 	var workDir string
 	if is.jobFile.WorkDir != "" {
@@ -178,12 +185,6 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 			user = "paperspace"
 		}
 	}
-
-	conn, err := is.CreateConn()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
 
 	// download criu, cedana client & run user-specified setup cmds
 	cmds := is.buildBaseCommands(user)
@@ -445,8 +446,8 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 		// wrap command in setsid so it can be checkpointed
 		// TODO: this is very hacky
 		if strings.Contains(task.C[0], "docker") {
-			// no need to setsid if this is a container 
-			// TODO NR: this needs to be overhauled (just assume user adds a detach) 
+			// no need to setsid if this is a container
+			// TODO NR: this needs to be overhauled (just assume user adds a detach)
 			*b = append(*b, task.C[0])
 
 		} else {
@@ -496,7 +497,7 @@ func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 		return err
 	}
 	defer client.Close()
-	
+
 	err = client.CopyDirToRemote(workDirPath, ".", &scp.DirTransferOption{})
 	if err != nil {
 		is.logger.Fatal().Err(err).Msg("couldn't copy local directory to instance")
