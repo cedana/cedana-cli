@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/market/catalog"
 	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
@@ -107,17 +108,15 @@ var setupTestCmd = &cobra.Command{
 	},
 }
 
-var unzipCmd = &cobra.Command{
-	Use:  "unzip",
-	Args: cobra.ExactArgs(2),
+var createDevInstanceCmd = &cobra.Command{
+	Use:  "create_dev_instance",
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		file := args[0]
-		folder := args[1]
-		err := utils.Unzip(file, folder)
-		if err != nil {
-			return err
-		}
+		id := args[0]
 
+		db := db.NewDB()
+
+		db.CreateMockInstance(id)
 		return nil
 	},
 }
@@ -130,5 +129,5 @@ func init() {
 	debugCmd.AddCommand(cfgCmd)
 	debugCmd.AddCommand(envCmd)
 	debugCmd.AddCommand(setupTestCmd)
-	debugCmd.AddCommand(unzipCmd)
+	debugCmd.AddCommand(createDevInstanceCmd)
 }

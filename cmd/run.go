@@ -42,7 +42,7 @@ func buildRunner() *Runner {
 
 	config, err := utils.InitCedanaConfig()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("could not set up spot config")
+		logger.Fatal().Err(err).Msg("could not set up config")
 	}
 
 	r := &Runner{
@@ -630,8 +630,9 @@ func (r *Runner) buildProviders() {
 			paperspace := buildPaperspaceProvider()
 			r.providers["paperspace"] = paperspace
 		}
-		// TODO: add others
-		r.providers["local"] = buildLocalProvider()
+		if p == "local" {
+			r.providers["local"] = buildLocalProvider()
+		}
 	}
 }
 

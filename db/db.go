@@ -131,6 +131,18 @@ func (db *DB) CreateInstance(instance *types.Instance) (*types.Instance, error) 
 	return instance, nil
 }
 
+func (db *DB) CreateMockInstance(id string) *types.Instance {
+	instance := types.Instance{
+		CedanaID: id,
+		Provider: "local",
+		Tag:      "worker",
+	}
+
+	db.orm.Create(&instance)
+
+	return &instance
+}
+
 func (db *DB) UpdateInstanceByID(instance *types.Instance, id uint) error {
 	db.orm.Model(&instance).Where("id = ?", id).Updates(instance)
 
@@ -188,7 +200,7 @@ func (db *DB) GetJobByFileName(name string) *types.Job {
 
 func (db *DB) UpdateJob(job *types.Job) error {
 	if job != nil {
-		db.orm.Model(&job).Updates(job)
+		db.orm.Model(&job).Where("job_id = ?", job.JobID).Updates(job)
 	}
 
 	return nil
