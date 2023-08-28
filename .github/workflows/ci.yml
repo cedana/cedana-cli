@@ -36,6 +36,10 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws configure set default.region ${{ secrets.AWS_REGION }}
 
+      - name: Run Binary
+        run: |
+          cd ../cedana-cli
+          ./cedana-cli
       - name: Install bats
         run: |
           git clone https://github.com/bats-core/bats-core.git
