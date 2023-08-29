@@ -19,6 +19,7 @@ require (
 )
 
 require (
+	github.com/adrg/strutil v0.3.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.32 // indirect
@@ -53,7 +54,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/nats-io/jwt/v2 v2.3.0 // indirect
+	github.com/nats-io/jwt/v2 v2.4.1 // indirect
 	github.com/nats-io/nkeys v0.4.4 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
@@ -88,6 +89,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.31.3
 	github.com/google/uuid v1.3.0
 	github.com/manifoldco/promptui v0.9.0
+	github.com/nats-io/nats-server/v2 v2.9.21
 	github.com/rs/zerolog v1.30.0
 	github.com/sevlyar/go-daemon v0.1.6
 	github.com/shirou/gopsutil/v3 v3.23.7 // indirect

@@ -12,7 +12,6 @@ import (
 
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/market"
-	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -22,6 +21,7 @@ import (
 	"k8s.io/utils/strings/slices"
 
 	cedana "github.com/cedana/cedana-cli/types"
+	core "github.com/cedana/cedana/types"
 )
 
 type Runner struct {
@@ -42,7 +42,7 @@ func buildRunner() *Runner {
 
 	config, err := utils.InitCedanaConfig()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("could not set up spot config")
+		logger.Fatal().Err(err).Msg("could not set up config")
 	}
 
 	r := &Runner{
@@ -120,27 +120,48 @@ var retryCmd = &cobra.Command{
 		}
 
 		r.job = job
-		// pull worker ID out
 
-		attachedInstanceIDs, err := job.GetInstanceIds()
-		if err != nil {
-			return err
-		}
-
-		var worker cedana.Instance
-
-		// this should be way better. ideally the spun up instances themselves
-		// should have
-		for _, i := range attachedInstanceIDs {
-			instance := r.db.GetInstanceByCedanaID(i.InstanceID)
-			if instance.Tag == "worker" {
-				worker = instance
+		switch job.State {
+		case core.JobSetupFailed:
+			attachedInstanceIDs, err := job.GetInstanceIds()
+			if err != nil {
+				return err
 			}
-		}
 
-		err = r.retryJob(worker)
-		if err != nil {
-			return err
+			var worker cedana.Instance
+
+			for _, i := range attachedInstanceIDs {
+				instance := r.db.GetInstanceByCedanaID(i.InstanceID)
+				if instance.Tag == "worker" {
+					worker = instance
+				}
+			}
+
+			err = r.retryJob(worker)
+			if err != nil {
+				return err
+			}
+
+		case core.JobStartupFailed:
+			// client is waiting for a retry command.
+			// user knows job failed due to incorrect setup (can check the jobtable)
+			// not ideal, good for now
+
+			// setup is complete, just resend task as a recovery command
+			w, err := NewWhisperer(job.JobID)
+			if err != nil {
+				return err
+			}
+
+			jobFile, err := cedana.InitJobFile(r.job.JobFilePath)
+			if err != nil {
+				r.logger.Fatal().Err(err).Msg("could not set up cedana job")
+			}
+
+			err = w.sendRetryCommand(jobFile)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -288,15 +309,15 @@ var restoreCmd = &cobra.Command{
 func (r *Runner) retryJob(worker cedana.Instance) error {
 	is := BuildInstanceSetup(worker, *r.job)
 
-	err := is.ClientSetup(true)
+	err := is.ClientSetup()
 
 	if err != nil {
 		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", worker.CedanaID, "yourjob.yml")
-		r.db.UpdateJobState(r.job, types.JobStateSetupFailed)
+		r.db.UpdateJobState(r.job, core.JobSetupFailed)
 		return err
 	}
 
-	r.db.UpdateJobState(r.job, types.JobStateRunning)
+	r.db.UpdateJobState(r.job, core.JobRunning)
 
 	// job is orchestrated by a local worker
 	orch, err := r.db.CreateInstance(&cedana.Instance{
@@ -356,7 +377,7 @@ func (r *Runner) restoreJob(jobID string) error {
 	r.jobFile = jobFile
 
 	candidates := market.Optimize(r.jobFile)
-	worker, err := r.deployWorker(candidates, false)
+	worker, err := r.deployWorker(candidates)
 	if err != nil {
 		r.logger.Fatal().Err(err).Msg("could not deploy worker")
 		return err
@@ -387,9 +408,9 @@ func (r *Runner) runJobSelfServe() error {
 	}
 
 	r.logger.Info().Msg("setting up job...")
-	r.db.UpdateJobState(r.job, types.JobStatePending)
+	r.db.UpdateJobState(r.job, core.JobPending)
 
-	worker, err := r.deployWorker(candidates, true)
+	worker, err := r.deployWorker(candidates)
 	if err != nil {
 		r.logger.Fatal().Err(err).Msg("could not deploy worker")
 		return err
@@ -418,7 +439,7 @@ func (r *Runner) runJobSelfServe() error {
 	return nil
 }
 
-func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*cedana.Instance, error) {
+func (r *Runner) deployWorker(candidates []cedana.Instance) (*cedana.Instance, error) {
 	// a for loop here that breaks when we have an instance
 	// as the list is sorted + filtered, most optimal is the first
 	var optimalInstance *cedana.Instance
@@ -492,15 +513,15 @@ func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*ceda
 
 	is := BuildInstanceSetup(*optimalInstance, *r.job)
 
-	err := is.ClientSetup(runTask)
+	err := is.ClientSetup()
 
 	if err != nil {
 		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", optimalInstance.AllocatedID, "yourjob.yml")
-		r.db.UpdateJobState(r.job, types.JobStateSetupFailed)
+		r.db.UpdateJobState(r.job, core.JobSetupFailed)
 		return nil, err
 	}
 
-	r.db.UpdateJobState(r.job, types.JobStateRunning)
+	r.db.UpdateJobState(r.job, core.JobRunning)
 	return optimalInstance, nil
 }
 
@@ -609,8 +630,9 @@ func (r *Runner) buildProviders() {
 			paperspace := buildPaperspaceProvider()
 			r.providers["paperspace"] = paperspace
 		}
-		// TODO: add others
-		r.providers["local"] = buildLocalProvider()
+		if p == "local" {
+			r.providers["local"] = buildLocalProvider()
+		}
 	}
 }
 
