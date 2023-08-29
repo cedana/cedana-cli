@@ -58,7 +58,7 @@ var SetupCmd = &cobra.Command{
 			jobFile:  jobFile,
 		}
 
-		is.ClientSetup(true)
+		is.ClientSetup()
 		return nil
 	},
 }
@@ -145,7 +145,7 @@ func (is *InstanceSetup) CreateConn() (*ssh.Client, error) {
 }
 
 // Runs cedana-specific and user-specified instantiation scripts for a client instance in an SSH session.
-func (is *InstanceSetup) ClientSetup(runTask bool) error {
+func (is *InstanceSetup) ClientSetup() error {
 
 	// copy workdir if specified and exists
 	var workDir string
@@ -192,17 +192,6 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 	if err != nil {
 		is.logger.Fatal().Err(err).Msg("error executing commands")
 		return err
-	}
-
-	if runTask {
-		// cd into workdir (if specified) & start task (as async to prevent hanging)
-		var task []string
-		is.buildTask(&task, workDir)
-		err = is.execCommandAsync(task, conn)
-		if err != nil {
-			is.logger.Fatal().Err(err).Msg("error executing task")
-			return err
-		}
 	}
 
 	// set up cedana systemctl daemon
@@ -433,29 +422,6 @@ func (is *InstanceSetup) buildUserSetupCommands(b *[]string) {
 	// if we _did_ manage to populate it
 	if len(cmds.C) > 0 {
 		*b = append(*b, cmds.C...)
-	}
-}
-
-func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
-	task := is.jobFile.Task
-	// simple for now
-	if len(task.C) != 1 {
-		is.logger.Fatal().Msg("too many or too few tasks, please ensure only one command is specified")
-	} else {
-		// wrap command in setsid so it can be checkpointed
-		// TODO: this is very hacky
-		if strings.Contains(task.C[0], "docker") {
-			// no need to setsid if this is a container 
-			// TODO NR: this needs to be overhauled (just assume user adds a detach) 
-			*b = append(*b, task.C[0])
-
-		} else {
-			if workDir != "" {
-				*b = append(*b, fmt.Sprintf("cd %s && setsid %s < /dev/null &> output.log &", workDir, task.C[0]))
-			} else {
-				*b = append(*b, fmt.Sprintf("setsid %s < /dev/null &> output.log &", task.C[0]))
-			}
-		}
 	}
 }
 

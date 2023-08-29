@@ -309,7 +309,7 @@ var restoreCmd = &cobra.Command{
 func (r *Runner) retryJob(worker cedana.Instance) error {
 	is := BuildInstanceSetup(worker, *r.job)
 
-	err := is.ClientSetup(true)
+	err := is.ClientSetup()
 
 	if err != nil {
 		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", worker.CedanaID, "yourjob.yml")
@@ -377,7 +377,7 @@ func (r *Runner) restoreJob(jobID string) error {
 	r.jobFile = jobFile
 
 	candidates := market.Optimize(r.jobFile)
-	worker, err := r.deployWorker(candidates, false)
+	worker, err := r.deployWorker(candidates)
 	if err != nil {
 		r.logger.Fatal().Err(err).Msg("could not deploy worker")
 		return err
@@ -410,7 +410,7 @@ func (r *Runner) runJobSelfServe() error {
 	r.logger.Info().Msg("setting up job...")
 	r.db.UpdateJobState(r.job, core.JobPending)
 
-	worker, err := r.deployWorker(candidates, true)
+	worker, err := r.deployWorker(candidates)
 	if err != nil {
 		r.logger.Fatal().Err(err).Msg("could not deploy worker")
 		return err
@@ -439,7 +439,7 @@ func (r *Runner) runJobSelfServe() error {
 	return nil
 }
 
-func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*cedana.Instance, error) {
+func (r *Runner) deployWorker(candidates []cedana.Instance) (*cedana.Instance, error) {
 	// a for loop here that breaks when we have an instance
 	// as the list is sorted + filtered, most optimal is the first
 	var optimalInstance *cedana.Instance
@@ -513,7 +513,7 @@ func (r *Runner) deployWorker(candidates []cedana.Instance, runTask bool) (*ceda
 
 	is := BuildInstanceSetup(*optimalInstance, *r.job)
 
-	err := is.ClientSetup(runTask)
+	err := is.ClientSetup()
 
 	if err != nil {
 		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", optimalInstance.AllocatedID, "yourjob.yml")
