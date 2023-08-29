@@ -35,13 +35,14 @@ type Commands struct {
 // Job type to be used to run on an instance, user-defined
 // should be yaml spec
 type JobFile struct {
-	JobFilePath       string            `mapstructure:"job_file_path"`
-	WorkDir           string            `mapstructure:"work_dir"` // TODO NR - data storage abstractions
-	Containerized     bool              `mapstructure:"containerized"`
-	UserInstanceSpecs UserInstanceSpecs `mapstructure:"instance_specs"`
-	SetupCommands     Commands          `mapstructure:"setup"`
-	Task              Commands          `mapstructure:"task"`
-	RestoredTask      Commands          `mapstructure:"restored_task"`
+	JobFilePath       string                    `mapstructure:"job_file_path"`
+	TaskDir           string                    `mapstructure:"task_dir"` //used to be work_dir
+	Storage           map[string]interface{}    `mapstructure:"storage"`
+	Containerized     bool                      `mapstructure:"containerized"`
+	UserInstanceSpecs UserInstanceSpecs         `mapstructure:"instance_specs"`
+	SetupCommands     Commands                  `mapstructure:"setup"`
+	Task              Commands                  `mapstructure:"task"`
+	RestoredTask      Commands                  `mapstructure:"restored_task"`
 }
 
 // foreign keys are weird in GORM, just attach InstanceIDs for now

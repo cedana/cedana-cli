@@ -156,19 +156,29 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 
 	// copy workdir if specified and exists
 	var workDir string
-	if is.jobFile.WorkDir != "" {
-		_, err := os.Stat(is.jobFile.WorkDir)
-		if err != nil {
-			// folder doesn't exist, error out and don't continue
-			return err
-		} else {
-			workDir = is.jobFile.WorkDir
-			err = is.scpWorkDir(workDir)
-			if err != nil {
-				return err
-			}
-		}
+	store, err := is.initStorage()
+	if err != nil {
+		return err
 	}
+
+	err = store.MountStorage()
+	if err != nil {
+		return err
+	}
+
+	// if is.jobFile.Storage != nil {
+	// 	_, err := os.Stat(is.jobFile.WorkDir)
+	// 	if err != nil {
+	// 		// folder doesn't exist, error out and don't continue
+	// 		return err
+	// 	} else {
+	// 		workDir = is.jobFile.WorkDir
+	// 		err = is.scpWorkDir(workDir)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// }
 
 	var user string
 
@@ -463,6 +473,12 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 	var keyPath string
 	var user string
+
+	_, err := os.Stat(workDirPath)
+	if err != nil {
+		// folder doesn't exist, error out and don't continue
+		return err
+	}
 
 	if is.instance.Provider == "aws" {
 		user = is.cfg.AWSConfig.User
