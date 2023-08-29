@@ -12,12 +12,14 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/nats-io/nats.go v1.28.0
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/povsister/scp v0.0.0-20210427074412-33febfd9f13e
 	github.com/rs/xid v1.5.0
 	gorm.io/gorm v1.24.6
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 )
 
 require (
+	github.com/adrg/strutil v0.3.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.32 // indirect
@@ -72,6 +74,7 @@ require (
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
