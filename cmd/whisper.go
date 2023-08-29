@@ -29,7 +29,7 @@ var checkpointType string
 
 var whisperCmd = &cobra.Command{
 	Use:   "whisper",
-	Short: "(gently) send manual checkpoint/restore commands over the stream for a job",
+	Short: "(gently) send manual commands over the stream for a job",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("please specify a subcommand")
 	},
