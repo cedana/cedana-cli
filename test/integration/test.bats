@@ -10,23 +10,19 @@ LOG_FILE="$HOME/tmp/messages.log"
 
 
 @test "Checking if aws cli is installed" {
-skip
     run aws --version
     [ "$status" -eq 0 ]
 }
 
 @test "Checking if cedana-cli executable exists" {
-  skip
     [[ -x "$INIT_CEDANA_CLI" ]]
 }
 
 @test "checking if job.yml exists in $YMLDIR" {
-skip
     [[ -e "$YMLDIR/$YML" ]]
 }
 
 @test "Check expected heartbeat_enabled value" {
-  skip
   run jq '.checkpoint.heartbeat_enabled' $HOME/.cedana/cedana_config.json
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "true" ]
@@ -34,14 +30,12 @@ skip
 }
 
 @test "Check expected keep_running value" {
-  skip
   run jq '.keep_running' $HOME/.cedana/cedana_config.json
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "true" ]
 }
 
 @test "Check expected heartbeat_interval_seconds value" {
-  skip
   run jq '.checkpoint.heartbeat_interval_seconds' $HOME/.cedana/cedana_config.json
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "0" ]
@@ -49,7 +43,6 @@ skip
 
 @test "Run job on instance" {
   skip
-  # skip
   run sudo ./build/cedana-cli run test/integration/jobs/job.yml > $HOME/tmp/log_output.txt
   # Test passed if success signal is received
   [ "$status" -eq 0 ]
@@ -64,7 +57,6 @@ skip
 
 @test "Check # of messages received on channel" {
   skip
-  # skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID=$(echo "$WORKER_ID_JSON" | jq -r '.[0].instance_id')
@@ -185,8 +177,6 @@ skip
 }
 
 @test "Tear down all instances" {
-  skip
-  # skip
   run sudo ./build/cedana-cli destroy-all > $HOME/tmp/log_output.txt
 
   # Test passed if success signal is received
@@ -194,7 +184,6 @@ skip
 }
 
 @test "Check # of running instances - after destroy" {
-  # skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 

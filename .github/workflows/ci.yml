@@ -99,8 +99,6 @@ jobs:
         run: |
           nats context add nats --server demo.nats.io:4222 --description "NATS Demo" --select
 
-      - uses: valeriangalliat/action-sshd-cloudflared@v1
-
       - name: Run Bats Tests
         run: |
           ./bats/bin/bats test/integration/test.bats
