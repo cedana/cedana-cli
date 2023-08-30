@@ -25,6 +25,7 @@ jobs:
       - name: Run Binary
         run: |
           ./build/cedana-cli
+
       - name: Set .pem
         run: |
           mkdir -p $HOME/.cedana
@@ -39,13 +40,14 @@ jobs:
       - name: Set output
         id: set_config
         run: |
-          config='{"aws":{"enabled_instance_families":["t2"],"enabled_regions":["us-east-2"],"image_id":"","launch_template":"cedana-base","ssh_key_path":"/root/.cedana/cedana-ec2.pem","user":""},"checkpoint":{"heartbeat_enabled":true,"heartbeat_interval_seconds":0},"connection":{"auth_token":"","nats_port":8222,"nats_url":"demo.nats.io"},"enabled_providers":["aws"],"keep_running":true,"paperspace":{"api_key":"","ssh_key_path":"","template_id":"","user":""},"self_serve":true,"shared_storage":{"dump_storage_dir":"~/.cedana/dump","mount_point":""}}'
+          config='{"aws":{"enabled_instance_families":["t2"],"enabled_regions":["us-east-2"],"image_id":"","launch_template":"cedana-base","ssh_key_path":"$HOME/.cedana/cedana-ec2.pem","user":""},"checkpoint":{"heartbeat_enabled":true,"heartbeat_interval_seconds":0},"connection":{"auth_token":"","nats_port":8222,"nats_url":"demo.nats.io"},"enabled_providers":["aws"],"keep_running":true,"paperspace":{"api_key":"","ssh_key_path":"","template_id":"","user":""},"self_serve":true,"shared_storage":{"dump_storage_dir":"~/.cedana/dump","mount_point":""}}'
           echo "$config" > $HOME/.cedana/cedana_config.json
           echo "::set-output name=config::$config"
 
       - name: Cat config
         run: |
           cat $HOME/.cedana/cedana_config.json
+
       - name: Install AWS CLI v2
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
