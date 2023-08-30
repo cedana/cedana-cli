@@ -4,7 +4,7 @@
 # ...
 
 # Perform the check using grep
-if grep -q '"checkpoint_state":"CHECKPOINT_FAILED"' /tmp/messages.log; then
+if grep -q '"checkpoint_state":"CHECKPOINT_FAILED"' $HOME/tmp/messages.log; then
     echo "Test failed: CHECKPOINT_FAILED found"
     exit 1
 else

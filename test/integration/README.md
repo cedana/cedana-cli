@@ -10,7 +10,11 @@ Integration tests provide end-to-end testing of cedana and do _not_ replace unit
    cd bats-core
    ./install.sh /usr/local
    done!
-3. For full integration tests, you will need aws cli installed and configured with you IAM that is associated with Cedana's AWS org.
+   Or with brew:
+   brew install bats-core
+3. Make sure to install jq as well:
+   https://jqlang.github.io/jq/download/
+4. For full integration tests, you will need aws cli installed and configured with you IAM that is associated with Cedana's AWS org.
    You will also need cedana-cli bootstrapped with the configuration settings of heartbeat_enabled and keep_running set to true.
    You will also need an example job.yml in /test/integration/jobs. Check the test.bats file for more info.
 

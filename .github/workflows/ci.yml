@@ -20,8 +20,38 @@ jobs:
           go-version: "1.21.0"
 
       - name: Build
-        run: go build -v ./...
+        run: go build -o ./build/ -v ./...
 
+      - name: Run Binary
+        run: |
+          ./build/cedana-cli
+
+      - name: Set Env
+        id: set-env
+        run: |
+          echo "CEDANA_CLI_PATH=$(realpath ./build/cedana-cli)" >> $GITHUB_ENV
+          /home/brandonsmith/cedana/cedana-cli/build/cedana-cli
+      - name: Set .pem
+        run: |
+          mkdir -p $HOME/.cedana
+          echo "${{ secrets.CEDANA_EC2_PEM }}" >> $HOME/.cedana/cedana-ec2.pem
+          chmod 400 $HOME/.cedana/cedana-ec2.pem
+
+      - name: Save JSON config
+        run: |
+          mkdir -p $HOME/.cedana
+          echo "${{ toJson(steps.set_config.outputs.config) }}" > $HOME/.cedana/cedana_config.json
+
+      - name: Set output
+        id: set_config
+        run: |
+          config='{"aws":{"enabled_instance_families":["t2"],"enabled_regions":["us-east-2"],"image_id":"","launch_template":"cedana-base","ssh_key_path":"/root/.cedana/cedana-ec2.pem","user":""},"checkpoint":{"heartbeat_enabled":true,"heartbeat_interval_seconds":0},"connection":{"auth_token":"","nats_port":8222,"nats_url":"demo.nats.io"},"enabled_providers":["aws"],"keep_running":true,"paperspace":{"api_key":"","ssh_key_path":"","template_id":"","user":""},"self_serve":true,"shared_storage":{"dump_storage_dir":"~/.cedana/dump","mount_point":""}}'
+          echo "$config" > $HOME/.cedana/cedana_config.json
+          echo "::set-output name=config::$config"
+
+      - name: Cat config
+        run: |
+          cat $HOME/.cedana/cedana_config.json
       - name: Install AWS CLI v2
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
@@ -36,16 +66,42 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws configure set default.region ${{ secrets.AWS_REGION }}
 
-      - name: Run Binary
+      - name: Install Sqlite3
         run: |
-          cd ../cedana-cli
-          ./cedana-cli
+          sudo apt update
+          sudo apt-get install sqlite3
+
+      - name: Create instances.db
+        run: |
+          sqlite3 $HOME/.cedana/instances.db &
+          kill $!
+
+      - name: Install nats
+        run: |
+          wget https://github.com/nats-io/natscli/releases/download/v0.0.35/nats-0.0.35-amd64.deb
+          sudo dpkg -i nats-0.0.35-amd64.deb
+
       - name: Install bats
         run: |
           git clone https://github.com/bats-core/bats-core.git
           cd bats-core
           ./install.sh ../bats
           cd ..
+
+      - name: Get programs
+        run: |
+          mkdir -p ./cedana/benchmarking
+          git clone "https://github.com/cedana/cedana-benchmarks.git" ./cedana/benchmarking
+      - name: Make tmp
+        run: |
+          mkdir -p $HOME/tmp/
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Add nats demo context
+        run: |
+          nats context add nats --server demo.nats.io:4222 --description "NATS Demo" --select
 
       - name: Run Bats Tests
         run: |
