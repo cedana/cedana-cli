@@ -12,7 +12,6 @@ import (
 	"github.com/cedana/cedana-cli/db"
 	cedana "github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
-	scp "github.com/povsister/scp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -154,34 +153,12 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 	}
 	defer conn.Close()
 
-	// copy workdir if specified and exists
-	var workDir string
 	store, err := is.initStorage()
 	if err != nil {
 		return err
 	}
 
-	err = store.MountStorage()
-	if err != nil {
-		return err
-	}
-
-	// if is.jobFile.Storage != nil {
-	// 	_, err := os.Stat(is.jobFile.WorkDir)
-	// 	if err != nil {
-	// 		// folder doesn't exist, error out and don't continue
-	// 		return err
-	// 	} else {
-	// 		workDir = is.jobFile.WorkDir
-	// 		err = is.scpWorkDir(workDir)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
-
 	var user string
-
 	if is.instance.Provider == "aws" {
 		user = is.cfg.AWSConfig.User
 		if user == "" {
@@ -196,6 +173,17 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 		}
 	}
 
+	err = is.setupStorage(store, user)
+	if err != nil {
+		return err
+	}
+
+	// err = is.execCommands(storageCmds, conn)
+	// if err != nil {
+	// 	is.logger.Fatal().Err(err).Msg("error mounting s3 bucket(s)")
+	// 	return err
+	// }
+
 	// download criu, cedana client & run user-specified setup cmds
 	cmds := is.buildBaseCommands(user)
 	is.buildUserSetupCommands(&cmds)
@@ -206,9 +194,9 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 	}
 
 	if runTask {
-		// cd into workdir (if specified) & start task (as async to prevent hanging)
+		// cd into taskdir (if specified) & start task (as async to prevent hanging)
 		var task []string
-		is.buildTask(&task, workDir)
+		is.buildTask(&task, is.jobFile.TaskDir)
 		err = is.execCommandAsync(task, conn)
 		if err != nil {
 			is.logger.Fatal().Err(err).Msg("error executing task")
@@ -468,61 +456,6 @@ func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
 			}
 		}
 	}
-}
-
-func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
-	var keyPath string
-	var user string
-
-	_, err := os.Stat(workDirPath)
-	if err != nil {
-		// folder doesn't exist, error out and don't continue
-		return err
-	}
-
-	if is.instance.Provider == "aws" {
-		user = is.cfg.AWSConfig.User
-		if user == "" {
-			user = "ubuntu"
-		}
-		keyPath = is.cfg.AWSConfig.SSHKeyPath
-	}
-
-	if is.instance.Provider == "paperspace" {
-		user = is.cfg.PaperspaceConfig.User
-		if user == "" {
-			user = "paperspace"
-		}
-		keyPath = is.cfg.PaperspaceConfig.SSHKeyPath
-	}
-
-	keyBytes, err := os.ReadFile(keyPath)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error loading keyfile to scp data to instance")
-		return err
-	}
-	config, err := scp.NewSSHConfigFromPrivateKey(user, keyBytes)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error creating config from key file")
-		return err
-	}
-
-	client, err := scp.NewClient(is.instance.IPAddress, config, &scp.ClientOption{})
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("couldn't establish a connection to the remote server")
-		return err
-	}
-	defer client.Close()
-
-	err = client.CopyDirToRemote(workDirPath, ".", &scp.DirTransferOption{})
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("couldn't copy local directory to instance")
-		return err
-	}
-
-	is.logger.Info().Msg("transferred work dir to remote instance.")
-
-	return nil
 }
 
 func init() {
