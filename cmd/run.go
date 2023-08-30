@@ -621,6 +621,8 @@ func (r *Runner) PublishJob() error {
 func (r *Runner) buildProviders() {
 	// get list of enabled enabledProviders from config
 	enabledProviders := r.cfg.EnabledProviders
+	// always have a local for testing or self-serve orchestrators
+	r.providers["local"] = buildLocalProvider()
 	for _, p := range enabledProviders {
 		if p == "aws" {
 			spot := buildAWSProvider()
@@ -629,9 +631,6 @@ func (r *Runner) buildProviders() {
 		if p == "paperspace" {
 			paperspace := buildPaperspaceProvider()
 			r.providers["paperspace"] = paperspace
-		}
-		if p == "local" {
-			r.providers["local"] = buildLocalProvider()
 		}
 	}
 }
