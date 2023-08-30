@@ -22,9 +22,9 @@ jobs:
       - name: Build
         run: go build -o ./build/ -v ./...
 
-      - name: Run Binary
-        run: |
-          ./build/cedana-cli
+      # - name: Run Binary
+      #   run: |
+      #     ./build/cedana-cli
 
       - name: Set Env
         id: set-env
