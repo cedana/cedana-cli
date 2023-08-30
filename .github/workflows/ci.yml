@@ -96,3 +96,5 @@ jobs:
       - name: Run Bats Tests
         run: |
           ./bats/bin/bats test/integration/test.bats
+
+# force
