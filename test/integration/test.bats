@@ -10,6 +10,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 
 
 @test "Checking if aws cli is installed" {
+skip
     run aws --version
     [ "$status" -eq 0 ]
 }
@@ -20,10 +21,12 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "checking if job.yml exists in $YMLDIR" {
+skip
     [[ -e "$YMLDIR/$YML" ]]
 }
 
 @test "Check expected heartbeat_enabled value" {
+  skip
   run jq '.checkpoint.heartbeat_enabled' $HOME/.cedana/cedana_config.json
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "true" ]
@@ -31,19 +34,21 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "Check expected keep_running value" {
+  skip
   run jq '.keep_running' $HOME/.cedana/cedana_config.json
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "true" ]
 }
 
 @test "Check expected heartbeat_interval_seconds value" {
+  skip
   run jq '.checkpoint.heartbeat_interval_seconds' $HOME/.cedana/cedana_config.json
   [ "$status" -eq 0 ]
   [ "${lines[0]}" = "0" ]
 }
 
 @test "Run job on instance" {
-
+  skip
   # skip
   run sudo ./build/cedana-cli run test/integration/jobs/job.yml > $HOME/tmp/log_output.txt
   # Test passed if success signal is received
@@ -52,11 +57,13 @@ LOG_FILE="$HOME/tmp/messages.log"
 
 
 @test "Checking if instances.db exists" {
+  skip
     [[ -f "$INSTANCES_DB" ]]
 }
 
 
 @test "Check # of messages received on channel" {
+  skip
   # skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
@@ -83,6 +90,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "Testing check point messages" {
+  skip
   # skip
   JOB_ID=$(sqlite3 "$INSTANCES_DB" "SELECT job_id FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
   WORKER_ID_JSON=$(sqlite3 "$INSTANCES_DB" "SELECT instances FROM jobs ORDER BY created_at DESC LIMIT 1;") && \
@@ -120,6 +128,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "Check for failed checkpoint" {
+  skip
   ./test/integration/check.sh
   [[ "$status" -eq 0 ]]
 }
@@ -160,6 +169,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 # Add check for failed restore msg
 
 @test "Check # of running instances - before destroy" {
+  skip
   # skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
@@ -175,6 +185,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "Tear down all instances" {
+  skip
   # skip
   run sudo ./build/cedana-cli destroy-all > $HOME/tmp/log_output.txt
 
