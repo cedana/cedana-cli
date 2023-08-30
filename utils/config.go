@@ -20,18 +20,14 @@ var ValidProviders = []string{
 }
 
 type CedanaConfig struct {
-	SelfServe        bool     `json:"self_serve" mapstructure:"self_serve"`
-	EnabledProviders []string `json:"enabed_providers" mapstructure:"enabled_providers"`
-	// configures cedana to spin up a new instance and restore on instance failure
-	KeepRunning bool `json:"keep_running" mapstructure:"keep_running"`
-
-	// provider specific configurations
-	AWSConfig        AWSConfig        `json:"aws" mapstructure:"aws"`
-	PaperspaceConfig PaperspaceConfig `json:"paperspace" mapstructure:"paperspace"`
-
-	Checkpoint    Checkpoint          `json:"checkpoint" mapstructure:"checkpoint"`
-	SharedStorage SharedStorageConfig `json:"shared_storage" mapstructure:"shared_storage"`
-	Connection    Connection          `json:"connection" mapstructure:"connection"`
+	SelfServe        bool                `json:"self_serve" mapstructure:"self_serve"`
+	EnabledProviders []string            `json:"enabled_providers" mapstructure:"enabled_providers"`
+	KeepRunning      bool                `json:"keep_running" mapstructure:"keep_running"`
+	AWSConfig        AWSConfig           `json:"aws" mapstructure:"aws"`
+	PaperspaceConfig PaperspaceConfig    `json:"paperspace" mapstructure:"paperspace"`
+	Checkpoint       Checkpoint          `json:"checkpoint" mapstructure:"checkpoint"`
+	SharedStorage    SharedStorageConfig `json:"shared_storage" mapstructure:"shared_storage"`
+	Connection       Connection          `json:"connection" mapstructure:"connection"`
 }
 
 type Connection struct {
