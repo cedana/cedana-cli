@@ -22,15 +22,9 @@ jobs:
       - name: Build
         run: go build -o ./build/ -v ./...
 
-      # - name: Run Binary
-      #   run: |
-      #     ./build/cedana-cli
-
-      - name: Set Env
-        id: set-env
+      - name: Run Binary
         run: |
-          echo "CEDANA_CLI_PATH=$(realpath ./build/cedana-cli)" >> $GITHUB_ENV
-          /home/brandonsmith/cedana/cedana-cli/build/cedana-cli
+          ./build/cedana-cli
       - name: Set .pem
         run: |
           mkdir -p $HOME/.cedana

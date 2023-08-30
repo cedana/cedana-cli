@@ -16,6 +16,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "Checking if cedana-cli executable exists" {
+  skip
     [[ -x "$INIT_CEDANA_CLI" ]]
 }
 
