@@ -2,7 +2,6 @@
 
 # Have if env vars are not set, then use a config file maybe
 INIT_CEDANA_CLI="$CEDANA_CLI_PATH"
-echo $INIT_CEDANA_CLI
 YMLDIR="$BATS_TEST_DIRNAME/jobs"
 YML="job.yml"
 INSTANCES_DB="$HOME/.cedana/instances.db"
