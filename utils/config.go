@@ -16,6 +16,7 @@ var ValidProviders = []string{
 	"gcp",
 	"azure",
 	"paperspace",
+	"local",
 }
 
 type CedanaConfig struct {

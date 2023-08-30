@@ -10,6 +10,7 @@ import (
 
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/server"
+	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
 	"github.com/olekukonko/tablewriter"
@@ -156,19 +157,43 @@ var listCheckpointsCmd = &cobra.Command{
 	},
 }
 
-func (c *Whisperer) sendCheckpointCommand(jobID string) {
+func (w *Whisperer) sendCheckpointCommand(jobID string) {
 	serverCommand := core.ServerCommand{
 		Command: "checkpoint",
 	}
 	publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	c.orch.PublishCommand(publishCtx, serverCommand)
+	w.orch.PublishCommand(publishCtx, serverCommand)
 	fmt.Printf("Successfully checkpointed job %s at %s\n", jobID, time.Now().Format("2006-01-02 15:04:05"))
 }
 
-func (c *Whisperer) sendRestoreCommand(jobID string, restoreFromLatest bool) error {
-	jsc, err := c.nc.JetStream()
+func (w *Whisperer) sendRetryCommand(jobFile *types.JobFile) error {
+	// check to make sure task exists
+	var updatedTask string
+	if jobFile.Task.C != nil {
+		updatedTask = jobFile.Task.C[0]
+	}
+
+	if updatedTask == "" {
+		return fmt.Errorf("could not find task in job file")
+	}
+
+	serverCommand := core.ServerCommand{
+		Command:     "retry",
+		UpdatedTask: updatedTask,
+	}
+
+	publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	w.orch.PublishCommand(publishCtx, serverCommand)
+
+	return nil
+}
+
+func (w *Whisperer) sendRestoreCommand(jobID string, restoreFromLatest bool) error {
+	jsc, err := w.nc.JetStream()
 	if err != nil {
 		return err
 	}
@@ -224,7 +249,7 @@ func (c *Whisperer) sendRestoreCommand(jobID string, restoreFromLatest bool) err
 	publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
-	c.orch.PublishCommand(publishCtx, core.ServerCommand{
+	w.orch.PublishCommand(publishCtx, core.ServerCommand{
 		Command: "restore",
 		CedanaState: core.CedanaState{
 			CheckpointPath: path,

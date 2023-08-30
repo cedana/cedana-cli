@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/cedana/cedana-cli/db"
 	cedana "github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
+	scp "github.com/povsister/scp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -58,7 +58,7 @@ var SetupCmd = &cobra.Command{
 			jobFile:  jobFile,
 		}
 
-		is.ClientSetup(true)
+		is.ClientSetup()
 		return nil
 	},
 }
@@ -145,7 +145,14 @@ func (is *InstanceSetup) CreateConn() (*ssh.Client, error) {
 }
 
 // Runs cedana-specific and user-specified instantiation scripts for a client instance in an SSH session.
-func (is *InstanceSetup) ClientSetup(runTask bool) error {
+func (is *InstanceSetup) ClientSetup() error {
+
+	//create connection first (and retry) beforehand
+	conn, err := is.CreateConn()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
 
 	// copy workdir if specified and exists
 	var workDir string
@@ -179,12 +186,6 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 		}
 	}
 
-	conn, err := is.CreateConn()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
 	// download criu, cedana client & run user-specified setup cmds
 	cmds := is.buildBaseCommands(user)
 	is.buildUserSetupCommands(&cmds)
@@ -192,17 +193,6 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 	if err != nil {
 		is.logger.Fatal().Err(err).Msg("error executing commands")
 		return err
-	}
-
-	if runTask {
-		// cd into workdir (if specified) & start task (as async to prevent hanging)
-		var task []string
-		is.buildTask(&task, workDir)
-		err = is.execCommandAsync(task, conn)
-		if err != nil {
-			is.logger.Fatal().Err(err).Msg("error executing task")
-			return err
-		}
 	}
 
 	// set up cedana systemctl daemon
@@ -436,31 +426,7 @@ func (is *InstanceSetup) buildUserSetupCommands(b *[]string) {
 	}
 }
 
-func (is *InstanceSetup) buildTask(b *[]string, workDir string) {
-	task := is.jobFile.Task
-	// simple for now
-	if len(task.C) != 1 {
-		is.logger.Fatal().Msg("too many or too few tasks, please ensure only one command is specified")
-	} else {
-		// wrap command in setsid so it can be checkpointed
-		// TODO: this is very hacky
-		if strings.Contains(task.C[0], "docker") {
-			// no need to setsid if this is a container
-			// TODO NR: this needs to be overhauled (just assume user adds a detach)
-			*b = append(*b, task.C[0])
-
-		} else {
-			if workDir != "" {
-				*b = append(*b, fmt.Sprintf("cd %s && setsid %s < /dev/null &> output.log &", workDir, task.C[0]))
-			} else {
-				*b = append(*b, fmt.Sprintf("setsid %s < /dev/null &> output.log &", task.C[0]))
-			}
-		}
-	}
-}
-
 func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
-	// TODO NR: we really should be using this: https://github.com/bramvdbogaerde/go-scp
 	var keyPath string
 	var user string
 
@@ -480,34 +446,27 @@ func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 		keyPath = is.cfg.PaperspaceConfig.SSHKeyPath
 	}
 
-	_, err := os.ReadFile(keyPath)
+	keyBytes, err := os.ReadFile(keyPath)
 	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error loading keyfile to ssh into instance")
+		is.logger.Fatal().Err(err).Msg("error loading keyfile to scp data to instance")
+		return err
+	}
+	config, err := scp.NewSSHConfigFromPrivateKey(user, keyBytes)
+	if err != nil {
+		is.logger.Fatal().Err(err).Msg("error creating config from key file")
 		return err
 	}
 
-	// since this is first to execute, we want to attempt connections the same way
-	// we do in createConn
-	conn, err := is.CreateConn()
+	client, err := scp.NewClient(is.instance.IPAddress, config, &scp.ClientOption{})
 	if err != nil {
+		is.logger.Fatal().Err(err).Msg("couldn't establish a connection to the remote server")
 		return err
 	}
-	is.logger.Info().Msg("connection with remote instance established.")
-	conn.Close()
+	defer client.Close()
 
-	scpCmd := exec.Command(
-		"scp", "-r", "-i", keyPath,
-		"-o", "StrictHostKeyChecking=no", // another security hazard, also goes away
-		"-o", "IdentitiesOnly=yes", // security hazard, but goes away once we use a go solution
-		workDirPath,
-		fmt.Sprintf("%s@%s:%s", user, is.instance.IPAddress, "."),
-	)
-
-	scpCmd.Stdout = os.Stdout
-	scpCmd.Stderr = os.Stderr
-
-	err = scpCmd.Run()
+	err = client.CopyDirToRemote(workDirPath, ".", &scp.DirTransferOption{})
 	if err != nil {
+		is.logger.Fatal().Err(err).Msg("couldn't copy local directory to instance")
 		return err
 	}
 

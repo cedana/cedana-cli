@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
+
+	core "github.com/cedana/cedana/types"
 )
 
 type UserInstanceSpecs struct {
@@ -44,27 +46,20 @@ type JobFile struct {
 	RestoredTask      Commands          `mapstructure:"restored_task"`
 }
 
+type Storage struct {
+}
+
 // foreign keys are weird in GORM, just attach InstanceIDs for now
 type Job struct {
 	gorm.Model
 	JobID              string    `json:"job_id"`        // ignore json unmarshal
 	JobFilePath        string    `json:"job_file_path"` // absolute path of job file
 	Instances          string    `json:"instances"`     // serialized instances.TODO: need to figure out associations!!
-	State              JobState  `json:"state"`
+	State              core.Flag `json:"state"`
 	Checkpointed       bool      `json:"checkpointed"`
 	LastCheckpointedAt time.Time `json:"last_checkpointed_at"` // latest checkpoint
 	Bucket             string    `json:"bucket"`
 }
-
-type JobState string
-
-const (
-	JobStatePending     JobState = "PENDING"
-	JobStateRunning     JobState = "RUNNING"
-	JobStateFailed      JobState = "FAILED"
-	JobStateDone        JobState = "DONE"
-	JobStateSetupFailed JobState = "SETUP_FAILED"
-)
 
 // only serialize instanceID, can reverse lookup for instance using id
 type SerializedInstance struct {
