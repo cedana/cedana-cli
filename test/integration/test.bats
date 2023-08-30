@@ -19,7 +19,6 @@ LOG_FILE="$HOME/tmp/messages.log"
     [[ -x "$INIT_CEDANA_CLI" ]]
 }
 
-
 @test "checking if job.yml exists in $YMLDIR" {
     [[ -e "$YMLDIR/$YML" ]]
 }
