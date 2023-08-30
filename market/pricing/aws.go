@@ -64,6 +64,8 @@ func (apm *AWSPricingModel) GetPrices(instances []cedana.Instance) []cedana.Inst
 
 		r, err := apm.client.DescribeSpotPriceHistory(apm.ctx, input)
 		if err != nil {
+			apm.logger.Log().Msgf("error with apm %v", *input)
+			apm.logger.Log().Msgf("error with apm %v", i.InstanceType)
 			apm.logger.Fatal().Err(err).Msg("error fetching spot price history")
 		}
 
