@@ -13,7 +13,6 @@ jobs:
       CI: true
     steps:
       - uses: actions/checkout@v3
-      - uses: valeriangalliat/action-sshd-cloudflared@v1
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -100,9 +99,8 @@ jobs:
         run: |
           nats context add nats --server demo.nats.io:4222 --description "NATS Demo" --select
 
+      - uses: valeriangalliat/action-sshd-cloudflared@v1
+
       - name: Run Bats Tests
         run: |
           ./bats/bin/bats test/integration/test.bats
-      - name: Sleep
-        run: |
-          sleep 10
