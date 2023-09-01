@@ -94,16 +94,23 @@ var downloadCatalogCmd = &cobra.Command{
 var setupTestCmd = &cobra.Command{
 	Use:   "setup_test",
 	Short: "setup nats for a test with jobId ID",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		jid := args[0]
+		wid := args[1]
 		r := buildRunner()
 
-		// create fake job
-		r.job = &types.Job{
+		testJob := &types.Job{
 			JobID: jid,
 		}
+
+		testJob.AppendInstance(wid)
+
+		// create fake job
+		r.job = testJob
 		r.SetupNATSForJob()
+
+		r.db.CreateMockJob(testJob)
 		return nil
 	},
 }

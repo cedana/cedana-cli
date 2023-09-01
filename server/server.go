@@ -74,6 +74,24 @@ func (co *CedanaOrchestrator) GenMetaStateIterator(ctx context.Context) (jetstre
 	return iter, nil
 }
 
+func (co *CedanaOrchestrator) GenLogIterator(ctx context.Context) (jetstream.MessagesContext, error) {
+	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.logs", co.jid, co.wid)
+	// create a consumer of meta state
+	cons, err := co.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
+		AckPolicy:     jetstream.AckNonePolicy,
+		DeliverPolicy: jetstream.DeliverNewPolicy,
+		FilterSubject: strings.Join([]string{"CEDANA", co.jid, co.wid, "logs"}, "."),
+	})
+
+	if err != nil {
+		co.logger.Info().Err(err).Msg("could not subscribe to NATS client logs")
+		return nil, err
+	}
+
+	iter, _ := cons.Messages()
+	return iter, nil
+}
+
 func (co *CedanaOrchestrator) PublishCommand(ctx context.Context, command core.ServerCommand) {
 	cmd, err := json.Marshal(command)
 	if err != nil {
@@ -206,6 +224,17 @@ func (co *CedanaOrchestrator) ProcessMetaState(stateIter jetstream.MessagesConte
 	}
 }
 
+func (co *CedanaOrchestrator) ProcessLogs(logIter jetstream.MessagesContext) error {
+	for {
+		msg, err := logIter.Next()
+		if err != nil {
+			return err
+		}
+		data := msg.Data()
+		co.logger.Info().Msgf("got log: %v", string(data))
+	}
+}
+
 func (co *CedanaOrchestrator) Start() error {
 	defer co.nc.Drain()
 
@@ -236,8 +265,14 @@ func (co *CedanaOrchestrator) Start() error {
 		return err
 	}
 
+	logIter, err := co.GenLogIterator(ctx)
+	if err != nil {
+		return err
+	}
+
 	go co.ProcessClientState(clientIter)
 	go co.ProcessMetaState(metaIter)
+	go co.ProcessLogs(logIter)
 
 	for {
 		select {

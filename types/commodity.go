@@ -92,16 +92,6 @@ func (i *Instance) GetGPUs() GpuInfo {
 	return gpu
 }
 
-func (i *Instance) SerializeSelf() ([]byte, error) {
-	return json.Marshal(i)
-}
-
-func (i *Instance) DeserializeSelf(data []byte) (Instance, error) {
-	var inst Instance
-	err := json.Unmarshal(data, &inst)
-	return inst, err
-}
-
 type GPU struct {
 	Name         string `json:"Name"`
 	Manufacturer string `json:"Manufacturer"`
