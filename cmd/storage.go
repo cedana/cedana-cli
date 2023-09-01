@@ -1,17 +1,17 @@
 package cmd
 
 import (
-	"fmt"
+	"context"
 	"os"
-	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	goofys "github.com/kahing/goofys/api"
+	"github.com/kahing/goofys/api/common"
 	"github.com/povsister/scp"
-
-	_ "github.com/rclone/rclone/backend/sftp"
 )
 
 type StorageProvider string
@@ -100,131 +100,58 @@ func (is *InstanceSetup) initStorage() (*Storage, error) {
 	return &st, nil
 }
 
-func (is *InstanceSetup) setupStorage(st *Storage, user string) error {
-
-	err := is.createRCloneConfig()
-	if err != nil {
-		return err
-	}
-
-	// f, err := fs.NewFs(context.Background(), is.instance.CedanaID+":")
-	// if err != nil {
-	// 	return err
-	// }
-
-	// entries, err := f.List(context.Background(), "")
-	// if err != nil {
-	// 	return err
-	// }
-	// is.logger.Info().Msgf("num of entries: %d", entries.Len())
+func (is *InstanceSetup) setupStorage(st *Storage, user, keyPath string) error {
 
 	//scp local directories
 	for destDir, sourceDir := range st.localDirs {
-		err := is.scpWorkDir(sourceDir, destDir)
+		err := is.scpWorkDir(sourceDir, destDir, user, keyPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	// is.scpWorkDir("~/.aws", "~/")
+	for mountPoint, bucket := range st.mirrorBuckets {
+		flags := &common.FlagStorage{
+			// File system
+			MountOptions:  make(map[string]string),
+			MountPoint:    mountPoint,
+			MountPointArg: mountPoint,
+			DirMode:       0755,
+			FileMode:      0644,
+			Uid:           uint32(os.Getuid()),
+			Gid:           uint32(os.Getgid()),
 
-	// installGoofys := []string{
-	// 	fmt.Sprintf("mkdir -p /home/%s/.cedana/", user),
-	// 	fmt.Sprintf("wget -nc https://github.com/kahing/goofys/releases/latest/download/goofys -O /home/%s/.cedana/goofys", user),
-	// 	fmt.Sprintf("sudo chmod +x /home/%s/.cedana/goofys", user),
-	// 	fmt.Sprintf("ls /home/%s/.cedana/", user),
-	// }
-	// b = append(b, installGoofys...)
-	// for destDir, bucket := range st.mirrorBuckets {
-	// 	mountCmd := []string{
-	// 		fmt.Sprintf("/home/%s/.cedana/goofys %s %s", user, bucket[5:], destDir),
-	// 	}
-	// 	b = append(b, mountCmd...)
-	// }
+			// Tuning,
+			Cheap:        false,
+			ExplicitDir:  false,
+			StatCacheTTL: time.Minute,
+			TypeCacheTTL: time.Minute,
+			HTTPTimeout:  time.Minute,
 
-	return nil
-}
+			// Common Backend Config
+			Endpoint:       "",
+			UseContentType: false,
 
-func (is *InstanceSetup) createRCloneConfig() error {
-	var sshKey string
-	var user string
-
-	switch is.instance.Provider {
-	case "aws":
-		sshKey = is.cfg.AWSConfig.SSHKeyPath
-		user = is.cfg.AWSConfig.User
-		if user == "" {
-			user = "ubuntu"
+			// Debugging,
+			DebugFuse:  false,
+			DebugS3:    false,
+			Foreground: false,
 		}
-	case "paperspace":
-		sshKey = is.cfg.PaperspaceConfig.SSHKeyPath
-		user = is.cfg.PaperspaceConfig.User
-		if user == "" {
-			user = "paperspace"
-		}
-	}
-
-	configStr := []string{
-		fmt.Sprintf("[%s]", is.instance.CedanaID),
-		"type = sftp",
-		fmt.Sprintf("host = %s", is.instance.IPAddress),
-		fmt.Sprintf("user = %s", user),
-		fmt.Sprintf("key_file = %s", sshKey),
-		"shell_type = unix", //hashsum needed as well?
-	}
-
-	homeDir := os.Getenv("HOME")
-	confPath := filepath.Join(homeDir, ".cedana/rclone.conf")
-	f, err := os.Create(confPath)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error creating rclone.conf")
-		return err
-	}
-	err = os.Chmod(confPath, 0o644)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error setting rclone.conf permissions")
-		return err
-	}
-	// remember to close the file
-	defer f.Close()
-
-	for _, line := range configStr {
-		_, err := f.WriteString(line + "\n")
+		_, _, err := goofys.Mount(context.Background(), bucket, flags)
 		if err != nil {
-			is.logger.Fatal().Err(err).Msg("error writing rclone.conf")
+			is.logger.Fatal().Err(err).Msgf("error mounting bucket %s at %s", bucket, mountPoint)
 			return err
 		}
 	}
 
-	os.Setenv("RCLONE_CONFIG", confPath)
-
 	return nil
 }
 
-func (is *InstanceSetup) scpWorkDir(workDirPath string, destPath string) error {
-	var keyPath string
-	var user string
-
+func (is *InstanceSetup) scpWorkDir(workDirPath string, destPath string, user string, keyPath string) error {
 	_, err := os.Stat(workDirPath)
 	if err != nil {
 		// folder doesn't exist, error out and don't continue
 		return err
-	}
-
-	if is.instance.Provider == "aws" {
-		user = is.cfg.AWSConfig.User
-		if user == "" {
-			user = "ubuntu"
-		}
-		keyPath = is.cfg.AWSConfig.SSHKeyPath
-	}
-
-	if is.instance.Provider == "paperspace" {
-		user = is.cfg.PaperspaceConfig.User
-		if user == "" {
-			user = "paperspace"
-		}
-		keyPath = is.cfg.PaperspaceConfig.SSHKeyPath
 	}
 
 	keyBytes, err := os.ReadFile(keyPath)

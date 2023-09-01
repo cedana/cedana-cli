@@ -159,11 +159,13 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 	}
 
 	var user string
+	var keyPath string
 	if is.instance.Provider == "aws" {
 		user = is.cfg.AWSConfig.User
 		if user == "" {
 			user = "ubuntu"
 		}
+		keyPath = is.cfg.AWSConfig.SSHKeyPath
 	}
 
 	if is.instance.Provider == "paperspace" {
@@ -171,9 +173,10 @@ func (is *InstanceSetup) ClientSetup(runTask bool) error {
 		if user == "" {
 			user = "paperspace"
 		}
+		keyPath = is.cfg.PaperspaceConfig.SSHKeyPath
 	}
 
-	err = is.setupStorage(store, user)
+	err = is.setupStorage(store, user, keyPath)
 	if err != nil {
 		return err
 	}
