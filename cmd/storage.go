@@ -76,7 +76,7 @@ func (is *InstanceSetup) initStorage() (*Storage, error) {
 				if err != nil {
 					return nil, err
 				}
-				st.mirrorBuckets[destDir] = sourceDir
+				st.mirrorBuckets[destDir] = sourceDir[5:]
 			} else {
 				_, err := os.Stat(sourceDir)
 				if err != nil {
