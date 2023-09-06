@@ -390,7 +390,7 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStart=/usr/bin/cedana client daemon 
+ExecStart=/usr/bin/cedana client daemon
 Environment=CEDANA_JOB_ID=%s CEDANA_AUTH_TOKEN=%s CEDANA_CLIENT_ID=%s USER=%s
 Restart=on-failure
 
