@@ -22,7 +22,7 @@
             "mode": "debug",
             "program": "${workspaceFolder}",
             "console": "integratedTerminal",
-            "args": ["whisper", "restore", "-j", "cjigihavbi2i8gns57g0"],
+            "args": ["whisper", "restore", "-j", "${input:promptForJobID}"],
 
         },
        {
