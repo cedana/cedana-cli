@@ -8,6 +8,7 @@ import (
 
 	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
+	"github.com/cedana/cedana/cedanarpc"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/rs/zerolog"
@@ -21,6 +22,7 @@ type CedanaOrchestrator struct {
 	nc     *nats.Conn
 	js     jetstream.JetStream   // jetstream interface/manager
 	jsc    nats.JetStreamContext // jetstream context (for object store)
+	client *cedanarpc.Client
 	// server should be instantiated w/ the job, so all this information is already present
 
 	id  string
@@ -243,7 +245,7 @@ func (co *CedanaOrchestrator) Start() error {
 		select {
 		case cmd := <-co.CmdChannel:
 			co.logger.Info().Msgf("publishing command: %v", cmd)
-			co.PublishCommand(context.Background(), cmd)
+			// co.PublishCommand(context.Background(), cmd)
 		}
 	}
 }
@@ -317,6 +319,8 @@ func NewOrchestrator(
 		logger.Fatal().Err(err).Msg("Could not create JetStream context")
 	}
 
+	cli := cedanarpc.NewClient(nc)
+
 	// command channel
 	cmdChan := make(chan core.ServerCommand)
 
@@ -324,12 +328,13 @@ func NewOrchestrator(
 		logger: logger,
 		config: config,
 
-		nc:  nc,
-		js:  js,
-		jsc: jsc,
-		id:  orchestratorId, // self
-		jid: jobId,
-		wid: clientId,
+		nc:     nc,
+		js:     js,
+		jsc:    jsc,
+		client: cli,
+		id:     orchestratorId, // self
+		jid:    jobId,
+		wid:    clientId,
 
 		CmdChannel: cmdChan,
 	}

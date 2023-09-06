@@ -12,6 +12,7 @@ import (
 	"github.com/cedana/cedana-cli/server"
 	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
+	"github.com/cedana/cedana/cedanarpc"
 	"github.com/nats-io/nats.go"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
@@ -158,13 +159,17 @@ var listCheckpointsCmd = &cobra.Command{
 }
 
 func (w *Whisperer) sendCheckpointCommand(jobID string) {
-	serverCommand := core.ServerCommand{
-		Command: "checkpoint",
-	}
-	publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+	// serverCommand := core.ServerCommand{
+	// 	Command: "checkpoint",
+	// }
+	// publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	// defer cancel()
 
-	w.orch.PublishCommand(publishCtx, serverCommand)
+	// w.orch.PublishCommand(publishCtx, serverCommand)
+
+	resp, err := w.orch.client.Checkpoint(&cedanarpc.CheckpointRequest{})
+
+	// rpc.Checkpoint(ctx, &nrpc.CheckpointRequest{JobID: w.orch.jid, WorkerID: w.orch.wid})
 	fmt.Printf("Successfully checkpointed job %s at %s\n", jobID, time.Now().Format("2006-01-02 15:04:05"))
 }
 
