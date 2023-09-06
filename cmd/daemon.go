@@ -250,12 +250,6 @@ func (cd *CLIDaemon) UpdateJobStatus(jobID string) error {
 		return err
 	}
 
-	// 	- get job id (db) and worker id (?)
-	// - Subscribe to multiple channels
-	// - Count # of received messages for each channel
-	// - Compare to expected
-	// - pass or fail each channel
-
 	iter, err := cons.Messages()
 	if err != nil {
 		return err
