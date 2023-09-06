@@ -121,7 +121,7 @@ var integrationCmd = &cobra.Command{
 
 		// TODO NR - expand later to bring in managed service
 		if r.cfg.SelfServe {
-			err = r.runJobSelfServe(true)
+			err = r.runJobSelfServe()
 			if err != nil {
 				return err
 			}
@@ -428,7 +428,7 @@ func (r *Runner) restoreJob(jobID string) error {
 Runs a job for the self serve model of Cedana.
 We don't deploy an orchestrator to the cloud (instead we run it locally in a daemon) and pass through our NATS.
 */
-func (r *Runner) runJobSelfServe(isTest ...bool) error {
+func (r *Runner) runJobSelfServe() error {
 	candidates := market.Optimize(r.jobFile)
 	err := r.SetupNATSForJob()
 	if err != nil {
@@ -463,7 +463,7 @@ func (r *Runner) runJobSelfServe(isTest ...bool) error {
 	// daemon has a separate instance of the runner - should we be passing
 	// self to it? TODO NR, probably some perf gains here
 	cd := NewCLIDaemon()
-	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID, true)
+	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID)
 
 	return nil
 }
