@@ -77,8 +77,6 @@ func (apm *AWSPricingModel) GetPrices(instances []cedana.Instance) []cedana.Inst
 	return pricedInstances
 }
 
-// Force
-
 func (apm *AWSPricingModel) GetPrice(i *cedana.Instance) {
 	input := &ec2.DescribeSpotPriceHistoryInput{
 		MaxResults:    aws.Int32(1),
