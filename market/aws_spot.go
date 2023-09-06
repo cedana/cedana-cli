@@ -565,7 +565,12 @@ func (s *Spot) GetInstanceStatus(instance cedana.Instance) (*cedana.ProviderEven
 func (s *Spot) AMIByRegion(region string) *string {
 	// return the default cedana AMI for region we're in
 	amiToRegion := map[string]string{
-		"us-east-2": "ami-02b07400abd6304af",
+		"us-east-1":      "ami-06162382082c5e082",
+		"us-east-2":      "ami-0913115aefa41ef33",
+		"us-west-1":      "ami-0f546131043d71e89",
+		"us-west-2":      "ami-003de64739466370a",
+		"ap-southeast-1": "ami-007c15aa36db08000",
+		"ap-southeast-2": "ami-0a60559019a825c9f",
 	}
 
 	if _, ok := amiToRegion[region]; !ok {
