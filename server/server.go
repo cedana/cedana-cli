@@ -86,11 +86,14 @@ func (co *CedanaOrchestrator) PublishCommand(ctx context.Context, command core.S
 	if err != nil {
 		co.logger.Info().Msgf("could not publish command with error %v", err)
 	}
+	// TODO BS Here we can push to db for integration tests
+	// [This .eq ACK count]
 
 	// block and wait for ack
 	select {
 	case <-ackF.Ok():
 		co.logger.Info().Msgf("ack received for command: %v", string(cmd))
+		//TODO BS Here we can count acks for integration tests
 	case err := <-ackF.Err():
 		co.logger.Info().Msgf("error received: %v for command: %v", err, string(cmd))
 	}
