@@ -158,19 +158,24 @@ var listCheckpointsCmd = &cobra.Command{
 	},
 }
 
-func (w *Whisperer) sendCheckpointCommand(jobID string) {
-	// serverCommand := core.ServerCommand{
-	// 	Command: "checkpoint",
-	// }
-	// publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	// defer cancel()
+func (w *Whisperer) sendCheckpointCommand(jobID string) error {
+	serverCommand := core.ServerCommand{
+		Command: "checkpoint",
+	}
+	publishCtx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
 
-	// w.orch.PublishCommand(publishCtx, serverCommand)
+	w.orch.PublishCommand(publishCtx, serverCommand)
 
-	resp, err := w.orch.client.Checkpoint(&cedanarpc.CheckpointRequest{})
+	resp, err := w.orch.Client.CheckpointService.Checkpoint(&cedanarpc.CheckpointRequest{JobID: w.orch.Jid, WorkerID: w.orch.Wid})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("GOT RPC RESPONSE from jobID %s and workerID %s", resp.JobID, resp.WorkerID)
 
 	// rpc.Checkpoint(ctx, &nrpc.CheckpointRequest{JobID: w.orch.jid, WorkerID: w.orch.wid})
 	fmt.Printf("Successfully checkpointed job %s at %s\n", jobID, time.Now().Format("2006-01-02 15:04:05"))
+	return nil
 }
 
 func (w *Whisperer) sendRetryCommand(jobFile *types.JobFile) error {

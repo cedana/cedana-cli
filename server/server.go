@@ -22,12 +22,12 @@ type CedanaOrchestrator struct {
 	nc     *nats.Conn
 	js     jetstream.JetStream   // jetstream interface/manager
 	jsc    nats.JetStreamContext // jetstream context (for object store)
-	client *cedanarpc.Client
+	Client *cedanarpc.Client
 	// server should be instantiated w/ the job, so all this information is already present
 
 	id  string
-	jid string // job id
-	wid string // worker id
+	Jid string // job id
+	Wid string // worker id
 
 	// used to coordinate checkpoints across multiple goroutines
 	CmdChannel chan core.ServerCommand
@@ -35,16 +35,16 @@ type CedanaOrchestrator struct {
 
 func (co *CedanaOrchestrator) AttachNewWorker(id string) {
 	// just replaces existing worker with new one - TODO NR - multinode orchestrators
-	co.wid = id
+	co.Wid = id
 }
 
 func (co *CedanaOrchestrator) GenClientStateIterator(ctx context.Context) (jetstream.MessagesContext, error) {
-	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.state", co.jid, co.wid)
+	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.state", co.Jid, co.Wid)
 	// create a consumer of client state
 	cons, err := co.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
 		AckPolicy:     jetstream.AckNonePolicy,
 		DeliverPolicy: jetstream.DeliverNewPolicy,
-		FilterSubject: strings.Join([]string{"CEDANA", co.jid, co.wid, "state"}, "."),
+		FilterSubject: strings.Join([]string{"CEDANA", co.Jid, co.Wid, "state"}, "."),
 	})
 
 	if err != nil {
@@ -59,12 +59,12 @@ func (co *CedanaOrchestrator) GenClientStateIterator(ctx context.Context) (jetst
 // MetaState refers to provider state - instance revocations, hardware failures or provider shutdowns
 // are broadcast on this iterator.
 func (co *CedanaOrchestrator) GenMetaStateIterator(ctx context.Context) (jetstream.MessagesContext, error) {
-	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.meta", co.jid, co.wid)
+	co.logger.Info().Msgf("consuming messages on subject CEDANA.%s.%s.meta", co.Jid, co.Wid)
 	// create a consumer of meta state
 	cons, err := co.js.CreateOrUpdateConsumer(ctx, "CEDANA", jetstream.ConsumerConfig{
 		AckPolicy:     jetstream.AckNonePolicy,
 		DeliverPolicy: jetstream.DeliverNewPolicy,
-		FilterSubject: strings.Join([]string{"CEDANA", co.jid, co.wid, "meta"}, "."),
+		FilterSubject: strings.Join([]string{"CEDANA", co.Jid, co.Wid, "meta"}, "."),
 	})
 
 	if err != nil {
@@ -82,7 +82,7 @@ func (co *CedanaOrchestrator) PublishCommand(ctx context.Context, command core.S
 		co.logger.Fatal().Err(err).Msg("could not marshal command")
 	}
 
-	ackF, err := co.js.PublishAsync(strings.Join([]string{"CEDANA", co.jid, co.wid, "commands"}, "."), cmd)
+	ackF, err := co.js.PublishAsync(strings.Join([]string{"CEDANA", co.Jid, co.Wid, "commands"}, "."), cmd)
 	if err != nil {
 		co.logger.Info().Msgf("could not publish command with error %v", err)
 	}
@@ -102,7 +102,7 @@ func (co *CedanaOrchestrator) getLatestCheckpoint() (*string, error) {
 	var checkpointPath string
 	var lastModifiedTime time.Time
 
-	store, err := co.jsc.ObjectStore(strings.Join([]string{"CEDANA", co.jid, "checkpoints"}, "_"))
+	store, err := co.jsc.ObjectStore(strings.Join([]string{"CEDANA", co.Jid, "checkpoints"}, "_"))
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (co *CedanaOrchestrator) ProcessMetaState(stateIter jetstream.MessagesConte
 		if len(stateBuffer) > 0 {
 			lastState := stateBuffer[len(stateBuffer)-1]
 			if lastState.Event.MarkedForTermination {
-				co.logger.Info().Msgf("instance %s marked for termination ... sending checkpoint", co.wid)
+				co.logger.Info().Msgf("instance %s marked for termination ... sending checkpoint", co.Wid)
 				// client logics checkpointType
 				co.CmdChannel <- core.ServerCommand{
 					Command: "checkpoint",
@@ -255,7 +255,7 @@ func (co *CedanaOrchestrator) HeartbeatCheckpoint(heartbeatTicker *time.Ticker) 
 		select {
 		// enters this and blocks until we get a message
 		case <-heartbeatTicker.C:
-			co.logger.Info().Msgf("sending heartbeat to client %s...", co.wid)
+			co.logger.Info().Msgf("sending heartbeat to client %s...", co.Wid)
 			co.CmdChannel <- core.ServerCommand{
 				Command:   "checkpoint",
 				Heartbeat: true, // for cedana client to pre-dump? TODO NR
@@ -270,7 +270,7 @@ func (co *CedanaOrchestrator) isInstanceIdle(stateBuffer []*core.CedanaState) {
 	// fed a buffer of states
 	idle := false
 	if idle {
-		co.logger.Info().Msgf("instance %s identified as idle... sending checkpoint", co.wid)
+		co.logger.Info().Msgf("instance %s identified as idle... sending checkpoint", co.Wid)
 		// client logics checkpointType
 		co.CmdChannel <- core.ServerCommand{
 			Command: "checkpoint",
@@ -286,7 +286,7 @@ func (co *CedanaOrchestrator) updateJobState(ctx context.Context, state *core.Ce
 	if err != nil {
 		co.logger.Info().Msgf("could not marshal state: %v", err)
 	}
-	_, err = co.js.Publish(ctx, strings.Join([]string{"CEDANA", co.jid, "state"}, "."), data)
+	_, err = co.js.Publish(ctx, strings.Join([]string{"CEDANA", co.Jid, "state"}, "."), data)
 	if err != nil {
 		co.logger.Info().Msgf("could not push new job state: %v with error: %v", state, err)
 		return err
@@ -331,10 +331,10 @@ func NewOrchestrator(
 		nc:     nc,
 		js:     js,
 		jsc:    jsc,
-		client: cli,
+		Client: cli,
 		id:     orchestratorId, // self
-		jid:    jobId,
-		wid:    clientId,
+		Jid:    jobId,
+		Wid:    clientId,
 
 		CmdChannel: cmdChan,
 	}
