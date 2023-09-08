@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.17.8
 	github.com/aws/aws-sdk-go-v2/config v1.17.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.21
-	github.com/cedana/cedana v0.6.9
+	github.com/cedana/cedana v0.7.0
 	github.com/glebarez/sqlite v1.9.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/nats-io/nats.go v1.28.0
