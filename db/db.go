@@ -183,6 +183,10 @@ func (db *DB) CreateJob(jobFile *types.JobFile) *types.Job {
 	return &cj
 }
 
+func (db *DB) CreateMockJob(job *types.Job) {
+	db.orm.Create(job)
+}
+
 func (db *DB) GetJob(id string) *types.Job {
 	var job types.Job
 	result := db.orm.Model(&job).Where("job_id = ?", id).Find(&job)

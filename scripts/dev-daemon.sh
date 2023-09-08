@@ -18,6 +18,6 @@ echo $DEV_CONFIG > ~/.cedana/cedana_config.json
 
 
 ## start cedana-cli 
-.././cedana-cli debug setup_test devjob 
+.././cedana-cli debug setup_test devjob devclient
 .././cedana-cli debug create_dev_instance devclient
 .././cedana-cli daemon -o devorch -j devjob -c devclient 
