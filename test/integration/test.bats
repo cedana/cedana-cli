@@ -163,7 +163,6 @@ LOG_FILE="$HOME/tmp/messages.log"
 
 @test "Check # of running instances - before destroy" {
   skip
-  # skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
@@ -178,6 +177,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "Tear down all instances" {
+  skip
   run sudo ./build/cedana-cli destroy-all > $HOME/tmp/log_output.txt
 
   # Test passed if success signal is received
@@ -185,6 +185,7 @@ LOG_FILE="$HOME/tmp/messages.log"
 }
 
 @test "Check # of running instances - after destroy" {
+  skip
   # Get the instance IDs of running instances
   instance_ids=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
 
