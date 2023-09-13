@@ -96,7 +96,7 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 	var config CedanaConfig
 	err = viper.ReadInConfig()
 	if err != nil {
-		panic("error loading config file. Make sure that config exists in $HOME/.cedana/cedana_config.json and that it's formatted correctly!")
+		return nil, fmt.Errorf("error loading config file: %s. Make sure that config exists and that it's formatted correctly!", err)
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
