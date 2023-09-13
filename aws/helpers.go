@@ -56,7 +56,7 @@ func GetInstanceStatus(ctx context.Context, c *ec2.Client, logger *zerolog.Logge
 
 		for _, r := range result.SpotInstanceRequests {
 			if *r.Status.Code == "instance-terminated-by-price" {
-				logger.Info().Msgf("instance % is about to be terminated with code %s", *r.InstanceId, *r.Status.Code)
+				logger.Info().Msgf("instance %s is about to be terminated with code %s", *r.InstanceId, *r.Status.Code)
 				sc <- *r.Status.Code
 			}
 		}
