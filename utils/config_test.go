@@ -10,6 +10,7 @@ const CEDANA_ENV_ENV_VAR = "CEDANA_ENV"
 
 func TestMain(m *testing.M) {
 	originalEnv := os.Getenv(CEDANA_ENV_ENV_VAR)
+	SetConfigFile("")
     code := m.Run() 
 	os.Setenv(CEDANA_ENV_ENV_VAR, originalEnv)
     os.Exit(code)
@@ -45,6 +46,36 @@ func TestCannotFindConfigFileInDevEnv(t *testing.T) {
 		"error loading config file: Config File \"cedana_config_dev\" Not Found in \"[%s/.cedana]\". Make sure that config exists and that it's formatted correctly!",
 		homeDir,
 	)
+
+
+	if err.Error() != expectedErrorMessage {
+		t.Errorf("unexpected error \"%s\" != \"%s\"", err, expectedErrorMessage)
+	}
+}
+
+func TestOverrideConfigFile(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	SetConfigFile(fmt.Sprintf("%s/testresources/test_config.json", wd))
+	_, err = InitCedanaConfig()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestOverrideConfigFileDoesNotExist(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Error(err)
+	}
+
+	SetConfigFile(fmt.Sprintf("%s/testresources/non_exisitent.json", wd))
+	_, err = InitCedanaConfig()
+	expectedErrorMessage := fmt.Sprintf(
+		"error loading config file: open %s/testresources/non_exisitent.json: no such file or directory. Make sure that config exists and that it's formatted correctly!", wd)
 
 
 	if err.Error() != expectedErrorMessage {
