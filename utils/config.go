@@ -63,6 +63,19 @@ type Checkpoint struct {
 	HeartbeatInterval int  `json:"heartbeat_interval_seconds" mapstructure:"heartbeat_interval_seconds"`
 }
 
+/*
+	configFile represents an override to the location of the cedana config file
+*/
+var configFile string = ""
+
+
+/*
+	SetConfigFile overrides the path to the cedana config file
+*/
+func SetConfigFile(c string) {
+	configFile = c
+}
+
 func InitCedanaConfig() (*CedanaConfig, error) {
 	// we want absolute paths for the config, and sometimes (if deployed in the cloud for instance)
 	// this gets run as root.
@@ -82,15 +95,19 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 
 	homedir := u.HomeDir
 
-	viper.AddConfigPath(filepath.Join(homedir, ".cedana/"))
 	viper.SetConfigType("json")
-	// change config if dev environment
-	if os.Getenv("CEDANA_ENV") == "dev" {
-		viper.SetConfigName("cedana_config_dev")
+	if configFile != "" {
+		viper.SetConfigFile(configFile)
 	} else {
-		viper.SetConfigName("cedana_config")
+		viper.AddConfigPath(filepath.Join(homedir, ".cedana/"))
+		// change config if dev environment
+		if os.Getenv("CEDANA_ENV") == "dev" {
+			viper.SetConfigName("cedana_config_dev")
+		} else {
+			viper.SetConfigName("cedana_config")
+		}
 	}
-
+	
 	viper.AutomaticEnv()
 
 	var config CedanaConfig
