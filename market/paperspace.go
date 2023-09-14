@@ -3,6 +3,7 @@ package market
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -59,6 +60,11 @@ type CreateMachinePaperspaceResponse struct {
 	DTLastRun              string `json:"dtLastRun"`
 	RestorePointSnapshotID string `json:"restorePointSnapshotId"`
 	RestorePointFrequency  string `json:"restorePointFrequency"`
+	Error struct {
+		Name string `json:"name"`
+		Status int `json:"status"`
+		Message string `json:"message"` 
+	} `json:"error"`
 }
 
 func (p *Paperspace) createSinglePaperspaceMachine(i *cedana.Instance) (*CreateMachinePaperspaceResponse, error) {
@@ -114,10 +120,15 @@ func (p *Paperspace) createSinglePaperspaceMachine(i *cedana.Instance) (*CreateM
 		return nil, err
 	}
 
+	
 	var machine CreateMachinePaperspaceResponse
 	err = json.Unmarshal(body, &machine)
 	if err != nil {
 		return nil, err
+	}
+	
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error creating machine %d: %s", resp.StatusCode, machine.Error.Message)
 	}
 
 	defer resp.Body.Close()
@@ -191,8 +202,11 @@ func (p *Paperspace) DescribeInstance(instances []*cedana.Instance, filter strin
 			p.logger.Fatal().Err(err)
 		}
 
-		machjson, _ := json.Marshal(m)
-		p.logger.Debug().Msgf("updating/describing machine %v", string(machjson))
+		machjson, err := json.Marshal(m)
+		if err != nil {
+			return err
+		}
+		p.logger.Info().Msgf("updating/describing machine %v", string(machjson))
 
 		// modify in place and persist
 		i.State = string(m.State)
