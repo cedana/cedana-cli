@@ -206,7 +206,7 @@ func (p *Paperspace) DescribeInstance(instances []*cedana.Instance, filter strin
 		if err != nil {
 			return err
 		}
-		p.logger.Info().Msgf("updating/describing machine %v", string(machjson))
+		p.logger.Debug().Msgf("updating/describing machine %v", string(machjson))
 
 		// modify in place and persist
 		i.State = string(m.State)
