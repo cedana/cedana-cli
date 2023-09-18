@@ -30,7 +30,6 @@ func BuildClientConfig(jobFile *cedana.JobFile) *core.Config {
 			NATSAuthToken: cfg.Connection.AuthToken,
 		},
 		SharedStorage: core.SharedStorage{
-			MountPoint:     cfg.SharedStorage.MountPoint,
 			DumpStorageDir: cfg.SharedStorage.DumpStorageDir,
 		},
 	}

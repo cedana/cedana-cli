@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/cedana/cedana-cli/utils"
+	"github.com/spf13/cobra"
 )
 
 var cedanaConfigFile string
@@ -32,7 +32,7 @@ func Execute() error {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "c", "", "path to cedana-config json file, including file name (ex. --cedana-config /Users/me/.cedana/myconfig.json)")
+	rootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "g", "", "path to cedana-config json file, including file name (ex. --cedana-config /Users/me/.cedana/myconfig.json)")
 }
 
 func initConfig() {
