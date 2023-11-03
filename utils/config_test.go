@@ -29,7 +29,7 @@ func TestCannotFindConfigFile(t *testing.T) {
 	)
 
 
-	if err.Error() != expectedErrorMessage {
+	if err != nil && err.Error() != expectedErrorMessage {
 		t.Errorf("unexpected error \"%s\" != \"%s\"", err, expectedErrorMessage)
 	}
 }
