@@ -64,16 +64,28 @@ type Checkpoint struct {
 }
 
 /*
-	configFile represents an override to the location of the cedana config file
+configFile represents an override to the location of the cedana config file
 */
 var configFile string = ""
 
+/*
+cedanaPath represents the folder that stores the config file
+*/
+var cedanaPath string = ".cedana/"
 
 /*
-	SetConfigFile overrides the path to the cedana config file
+SetConfigFile overrides the path to the cedana config file
 */
 func SetConfigFile(c string) {
 	configFile = c
+}
+
+func SetCedanaPath(p string) {
+	cedanaPath = p
+}
+
+func GetCedanaPath() string {
+	return cedanaPath
 }
 
 func InitCedanaConfig() (*CedanaConfig, error) {
@@ -99,7 +111,7 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 	} else {
-		viper.AddConfigPath(filepath.Join(homedir, ".cedana/"))
+		viper.AddConfigPath(filepath.Join(homedir, cedanaPath))
 		// change config if dev environment
 		if os.Getenv("CEDANA_ENV") == "dev" {
 			viper.SetConfigName("cedana_config_dev")
@@ -107,7 +119,7 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 			viper.SetConfigName("cedana_config")
 		}
 	}
-	
+
 	viper.AutomaticEnv()
 
 	var config CedanaConfig
