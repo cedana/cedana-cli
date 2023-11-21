@@ -103,6 +103,36 @@ var runCmd = &cobra.Command{
 	},
 }
 
+var integrationCmd = &cobra.Command{
+	Use:    "integration",
+	Short:  "Integration tests",
+	Hidden: true,
+	Args:   cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := buildRunner()
+		defer r.cleanRunner()
+
+		jobFile, err := cedana.InitJobFile(args[0])
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not set up cedana job")
+		}
+		r.jobFile = jobFile
+
+		r.job = r.db.CreateJob(r.jobFile)
+
+		// TODO NR - expand later to bring in managed service
+		if r.cfg.SelfServe {
+			err = r.runJobSelfServe()
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		return nil
+	},
+}
+
 var retryCmd = &cobra.Command{
 	Use:   "retry",
 	Short: "Retry a failed setup from jobID [job-id]",
