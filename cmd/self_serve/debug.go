@@ -8,7 +8,6 @@ import (
 	"github.com/cedana/cedana-cli/cmd"
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/market/catalog"
-	"github.com/cedana/cedana-cli/types"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -92,29 +91,6 @@ var downloadCatalogCmd = &cobra.Command{
 	},
 }
 
-var setupTestCmd = &cobra.Command{
-	Use:   "setup_test",
-	Short: "setup nats for a test with jobId ID",
-	Args:  cobra.ExactArgs(2),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		jid := args[0]
-		wid := args[1]
-		r := buildRunner()
-
-		testJob := &types.Job{
-			JobID: jid,
-		}
-
-		testJob.AppendInstance(wid)
-
-		// create fake job
-		r.job = testJob
-
-		r.db.CreateMockJob(testJob)
-		return nil
-	},
-}
-
 var createDevInstanceCmd = &cobra.Command{
 	Use:  "create_dev_instance",
 	Args: cobra.ExactArgs(1),
@@ -135,6 +111,5 @@ func init() {
 	debugCmd.AddCommand(downloadCatalogCmd)
 	debugCmd.AddCommand(cfgCmd)
 	debugCmd.AddCommand(envCmd)
-	debugCmd.AddCommand(setupTestCmd)
 	debugCmd.AddCommand(createDevInstanceCmd)
 }

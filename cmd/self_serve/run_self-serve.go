@@ -13,7 +13,6 @@ import (
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/market"
 	"github.com/cedana/cedana-cli/utils"
-	"github.com/nats-io/nats.go"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
@@ -31,7 +30,6 @@ type Runner struct {
 	jobFile   *cedana.JobFile
 	job       *cedana.Job
 	db        *db.DB
-	nc        *nats.Conn
 }
 
 var showOnlyRunning bool
@@ -57,10 +55,6 @@ func buildRunner() *Runner {
 	return r
 }
 
-func (r *Runner) cleanRunner() {
-	r.nc.Close()
-}
-
 var runSelfServeCmd = &cobra.Command{
 	Use:   "self-serve",
 	Short: "Run your workloads, bringing your own clouds.",
@@ -72,7 +66,6 @@ var runCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		r := buildRunner()
-		defer r.cleanRunner()
 
 		jobFile, err := cedana.InitJobFile(args[0])
 		if err != nil {
@@ -102,7 +95,6 @@ var integrationCmd = &cobra.Command{
 	Args:   cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		r := buildRunner()
-		defer r.cleanRunner()
 
 		jobFile, err := cedana.InitJobFile(args[0])
 		if err != nil {
@@ -130,7 +122,6 @@ var showInstancesCmd = &cobra.Command{
 	Short: "Show instances launched with Cedana",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		r := buildRunner()
-		defer r.cleanRunner()
 
 		// update state, by calling the correct DescribeInstances function for each set of instances
 		// we don't want to call update functions individually, would ideally do it in batch (like w/ AWS)
@@ -181,7 +172,6 @@ var destroyCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		r := buildRunner()
-		defer r.cleanRunner()
 		// instance destruction is handled by the provider (both db and at provider levels)
 		// TODO NR: assuming for now user just wants to destroy one instance, have to expand
 		id := args[0]
@@ -215,8 +205,6 @@ var destroyAllCmd = &cobra.Command{
 	Short: "Destroy all running instances launched with Cedana",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		r := buildRunner()
-		defer r.cleanRunner()
-
 		runningInstances := r.db.GetAllRunningInstances()
 
 		r.logger.Info().Msgf("destroying %d instances...", len(runningInstances))
