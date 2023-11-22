@@ -26,7 +26,6 @@ var statusCmd = &cobra.Command{
 		r := buildRunner()
 		jobs := r.db.GetAllJobs()
 
-		// TODO NR: job status here should query NATS to get most current state of the job (and/or infer it)
 		r.prettyPrintJobs(jobs)
 		return nil
 	},

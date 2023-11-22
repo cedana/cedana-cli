@@ -2,7 +2,6 @@ package self_serve
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"github.com/cedana/cedana-cli/market"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
@@ -54,18 +52,6 @@ func buildRunner() *Runner {
 		db:        db.NewDB(),
 	}
 
-	// create nats connections.
-	// placing this here acts almost as a proxy for an authentication server
-	// TODO NR: weak though!!
-	opts := []nats.Option{nats.Name("Cedana CLI")}
-	opts = append(opts, nats.Token(r.cfg.Connection.AuthToken))
-
-	nc, err := nats.Connect(r.cfg.Connection.NATSUrl, opts...)
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("Could not connect to NATS")
-	}
-
-	r.nc = nc
 	r.buildProviders()
 
 	return r
@@ -260,16 +246,11 @@ We don't deploy an orchestrator to the cloud (instead we run it locally in a dae
 */
 func (r *Runner) runJobSelfServe() error {
 	candidates := market.Optimize(r.jobFile)
-	err := r.SetupNATSForJob()
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("could not set up inter-cloud broker architecture")
-		return err
-	}
 
 	r.logger.Info().Msg("setting up job...")
 	r.db.UpdateJobState(r.job, core.JobPending)
 
-	_, err = r.deployWorker(candidates)
+	_, err := r.deployWorker(candidates)
 	if err != nil {
 		r.logger.Fatal().Err(err).Msg("could not deploy worker")
 		return err
@@ -365,99 +346,6 @@ func (r *Runner) deployWorker(candidates []cedana.Instance) (*cedana.Instance, e
 
 	r.db.UpdateJobState(r.job, core.JobRunning)
 	return optimalInstance, nil
-}
-
-func (r *Runner) SetupNATSForJob() error {
-	err := r.CreateNATSStream()
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("Could not create NATS stream")
-		return err
-	}
-
-	err = r.CreateObjectStores()
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("Could not create object stores")
-		return err
-	}
-
-	err = r.PublishJob()
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("Could not publish initial job state")
-		return err
-	}
-
-	return nil
-}
-
-func (r *Runner) CreateNATSStream() error {
-	js, err := jetstream.New(r.nc)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-
-	_, err = js.CreateStream(ctx, jetstream.StreamConfig{
-		Name:     "CEDANA",
-		Subjects: []string{"CEDANA.>"},
-	})
-
-	if err != nil {
-		if strings.Contains(err.Error(), "stream already exists") {
-			// stream already exists. We're possibly retrying an extant job in this case - drop error
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-// creates object stores for checkpoints & for workdirs
-func (r *Runner) CreateObjectStores() error {
-	js, err := r.nc.JetStream()
-	if err != nil {
-		return err
-	}
-
-	// create checkpoint bucket (TODO NR: should this be elsewhere?)
-	_, err = js.CreateObjectStore(&nats.ObjectStoreConfig{
-		Bucket: strings.Join([]string{"CEDANA", r.job.JobID, "checkpoints"}, "_"),
-	})
-
-	if err != nil {
-		// if the bucket already exists, just drop the error
-		if strings.Contains(err.Error(), "exists") {
-			r.logger.Info().Msg("checkpoint bucket already exists, skipping creation...")
-			return nil
-		} else {
-			r.logger.Fatal().Err(err).Msg("Could not create checkpoint bucket")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *Runner) PublishJob() error {
-	// serialize and publish job to NATS for initial ingestion by server
-	js, err := jetstream.New(r.nc)
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
-	marshaledJob, err := json.Marshal(r.job)
-	if err != nil {
-		return err
-	}
-	_, err = js.Publish(ctx, fmt.Sprintf("CEDANA.%s", r.job.JobID), marshaledJob)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *Runner) buildProviders() {

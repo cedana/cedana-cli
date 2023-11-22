@@ -27,13 +27,6 @@ type CedanaConfig struct {
 	PaperspaceConfig PaperspaceConfig    `json:"paperspace" mapstructure:"paperspace"`
 	Checkpoint       Checkpoint          `json:"checkpoint" mapstructure:"checkpoint"`
 	SharedStorage    SharedStorageConfig `json:"shared_storage" mapstructure:"shared_storage"`
-	Connection       Connection          `json:"connection" mapstructure:"connection"`
-}
-
-type Connection struct {
-	NATSUrl   string `json:"nats_url" mapstructure:"nats_url"`
-	NATSPort  int    `json:"nats_port" mapstructure:"nats_port"`
-	AuthToken string `json:"auth_token" mapstructure:"auth_token"`
 }
 
 type AWSConfig struct {
@@ -64,13 +57,12 @@ type Checkpoint struct {
 }
 
 /*
-	configFile represents an override to the location of the cedana config file
+configFile represents an override to the location of the cedana config file
 */
 var configFile string = ""
 
-
 /*
-	SetConfigFile overrides the path to the cedana config file
+SetConfigFile overrides the path to the cedana config file
 */
 func SetConfigFile(c string) {
 	configFile = c
@@ -107,7 +99,7 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 			viper.SetConfigName("cedana_config")
 		}
 	}
-	
+
 	viper.AutomaticEnv()
 
 	var config CedanaConfig
@@ -150,10 +142,6 @@ func CreateCedanaConfig(path string) error {
 			ImageId:                 "",
 			EnabledInstanceFamilies: []string{"t2"}, // basic instance family
 			EnabledRegions:          []string{},
-		},
-		Connection: Connection{
-			NATSUrl:  "demo.nats.io",
-			NATSPort: 8222,
 		},
 	}
 

@@ -109,7 +109,6 @@ var setupTestCmd = &cobra.Command{
 
 		// create fake job
 		r.job = testJob
-		r.SetupNATSForJob()
 
 		r.db.CreateMockJob(testJob)
 		return nil

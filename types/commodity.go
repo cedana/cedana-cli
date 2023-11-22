@@ -69,7 +69,7 @@ type CedanaCluster struct {
 
 type Instance struct {
 	gorm.Model
-	CedanaID         string  `json:"-"`            // ignore json unmarshal. Cedana ID used for NATS messages
+	CedanaID         string  `json:"-"`
 	AllocatedID      string  `json:"allocated_id"` // id allocated by the provider, not to be used as a key
 	Provider         string  `json:"provider"`
 	InstanceType     string  `json:"InstanceType"`
