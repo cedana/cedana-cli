@@ -228,10 +228,6 @@ var destroyAllCmd = &cobra.Command{
 	},
 }
 
-/*
-Runs a job for the self serve model of Cedana.
-We don't deploy an orchestrator to the cloud (instead we run it locally in a daemon) and pass through our NATS.
-*/
 func (r *Runner) runJobSelfServe() error {
 	candidates := market.Optimize(r.jobFile)
 
