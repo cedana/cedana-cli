@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"context"
@@ -333,7 +333,8 @@ func init() {
 	whisperRestoreCmd.MarkFlagsMutuallyExclusive("latest", "path")
 	whisperRestoreCmd.MarkFlagsRequiredTogether("type", "path")
 	listCheckpointsCmd.Flags().StringVarP(&jobID, "job-id", "j", "", "job id")
-	rootCmd.AddCommand(whisperCmd)
+
+	runSelfServeCmd.AddCommand(whisperCmd)
 	whisperCmd.AddCommand(checkpointCmd)
 	whisperCmd.AddCommand(whisperRestoreCmd)
 	whisperCmd.AddCommand(listCheckpointsCmd)

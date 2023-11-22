@@ -1,10 +1,11 @@
-package cmd
+package self_serve
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/cedana/cedana-cli/cmd"
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/market/catalog"
 	"github.com/cedana/cedana-cli/types"
@@ -129,7 +130,7 @@ var createDevInstanceCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(debugCmd)
+	cmd.RootCmd.AddCommand(debugCmd)
 	debugCmd.AddCommand(parseAndUploadToR2Cmd)
 	debugCmd.AddCommand(generateCatalogCmd)
 	debugCmd.AddCommand(downloadCatalogCmd)

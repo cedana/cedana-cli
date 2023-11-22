@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"context"
@@ -452,5 +452,5 @@ func (b *Bootstrap) createLaunchTemplates(regions []string, keyName string) erro
 }
 
 func init() {
-	rootCmd.AddCommand(bootstrapCmd)
+	runSelfServeCmd.AddCommand(bootstrapCmd)
 }

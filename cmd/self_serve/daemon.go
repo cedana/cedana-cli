@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"context"
@@ -312,7 +312,7 @@ func (cd *CLIDaemon) sendStatus(state types.MetaState, clientID string, jobID st
 }
 
 func init() {
-	rootCmd.AddCommand(daemonCmd)
+	runSelfServeCmd.AddCommand(daemonCmd)
 	daemonCmd.Flags().StringVarP(&orchestratorID, "orchestrator-id", "o", "", "orchestrator id")
 	daemonCmd.Flags().StringVarP(&clientID, "client-id", "c", "", "client id")
 	daemonCmd.Flags().StringVarP(&jobID, "job-id", "j", "", "job id")

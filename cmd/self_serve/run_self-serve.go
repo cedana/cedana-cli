@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cedana/cedana-cli/cmd"
 	"github.com/cedana/cedana-cli/db"
 	"github.com/cedana/cedana-cli/market"
 	"github.com/cedana/cedana-cli/utils"
@@ -72,6 +73,11 @@ func buildRunner() *Runner {
 
 func (r *Runner) cleanRunner() {
 	r.nc.Close()
+}
+
+var runSelfServeCmd = &cobra.Command{
+	Use:   "self-serve",
+	Short: "Run your workloads locally, using NATS and Jetstream",
 }
 
 var runCmd = &cobra.Command{
@@ -774,11 +780,13 @@ func prettyPrintInstances(instances []cedana.Instance) {
 
 func init() {
 	showInstancesCmd.Flags().BoolVarP(&showOnlyRunning, "running", "r", false, "Show only running instances")
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(integrationCmd)
-	rootCmd.AddCommand(destroyCmd)
-	rootCmd.AddCommand(showInstancesCmd)
-	rootCmd.AddCommand(destroyAllCmd)
-	rootCmd.AddCommand(restoreCmd)
-	rootCmd.AddCommand(retryCmd)
+	cmd.RootCmd.AddCommand(runSelfServeCmd)
+
+	runSelfServeCmd.AddCommand(runCmd)
+	runSelfServeCmd.AddCommand(integrationCmd)
+	runSelfServeCmd.AddCommand(destroyCmd)
+	runSelfServeCmd.AddCommand(showInstancesCmd)
+	runSelfServeCmd.AddCommand(destroyAllCmd)
+	runSelfServeCmd.AddCommand(restoreCmd)
+	runSelfServeCmd.AddCommand(retryCmd)
 }

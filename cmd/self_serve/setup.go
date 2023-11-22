@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"encoding/json"
@@ -476,7 +476,7 @@ func (is *InstanceSetup) scpWorkDir(workDirPath string) error {
 }
 
 func init() {
-	rootCmd.AddCommand(SetupCmd)
+	runSelfServeCmd.AddCommand(SetupCmd)
 	SetupCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file to use for setup")
 	SetupCmd.Flags().StringVarP(&instanceId, "instance", "i", "", "provider instance id to setup")
 	cobra.MarkFlagRequired(SetupCmd.Flags(), "job")

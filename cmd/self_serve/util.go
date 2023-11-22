@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"github.com/cedana/cedana-cli/aws"
@@ -30,5 +30,5 @@ func StringPtrToString(p *string) string {
 }
 
 func init() {
-	rootCmd.AddCommand(copyRegion)
+	runSelfServeCmd.AddCommand(copyRegion)
 }

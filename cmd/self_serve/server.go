@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"fmt"
@@ -88,5 +88,5 @@ func setupConnOptions(opts []nats.Option, logger *zerolog.Logger) []nats.Option 
 }
 
 func init() {
-	rootCmd.AddCommand(serverCmd)
+	runSelfServeCmd.AddCommand(serverCmd)
 }

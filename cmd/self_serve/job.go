@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"github.com/cedana/cedana-cli/db"
@@ -48,7 +48,7 @@ func prettyPrintCheckpoints() {
 }
 
 func init() {
-	rootCmd.AddCommand(jobCmd)
+	runSelfServeCmd.AddCommand(jobCmd)
 	jobCmd.AddCommand(purgeJobsCmd)
 	jobCmd.AddCommand(statusCmd)
 }
