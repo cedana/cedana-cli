@@ -1,12 +1,9 @@
 package self_serve
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cedana/cedana-cli/db"
@@ -186,31 +183,11 @@ func (is *InstanceSetup) ClientSetup() error {
 		}
 	}
 
-	// download criu, cedana client & run user-specified setup cmds
-	cmds := is.buildBaseCommands(user)
+	var cmds []string
 	is.buildUserSetupCommands(&cmds)
 	err = is.execCommands(cmds, conn)
 	if err != nil {
 		is.logger.Fatal().Err(err).Msg("error executing commands")
-		return err
-	}
-
-	// set up cedana systemctl daemon
-	var setupCedanaDaemon []string
-	is.buildCedanaDaemonCommands(&setupCedanaDaemon, user)
-	// TODO - this is an experiment; running daemon and task synchronously
-	err = is.execCommands(setupCedanaDaemon, conn)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error executing cedana daemon")
-		return err
-	}
-
-	// start cedana daemon (as async to avoid hanging)
-	var startCedanaDaemon []string
-	is.startCedanaDaemonCommand(&startCedanaDaemon)
-	err = is.execCommandAsync(startCedanaDaemon, conn)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error starting cedana daemon")
 		return err
 	}
 
@@ -322,98 +299,6 @@ func (is *InstanceSetup) execCommandAsync(cmds []string, conn *ssh.Client) error
 	}
 
 	return nil
-}
-
-func (is *InstanceSetup) buildBaseCommands(user string) []string {
-	var b []string
-	cedanaSteps := []string{
-		// download and install the latest cedana release
-		//assumption here that it's an ubuntu box!
-		fmt.Sprintf("curl -s https://api.github.com/repos/cedana/cedana/releases/latest | grep %q | grep %q | cut -d %q -f 2,3 | xargs | wget -qi - -O cedana_client.deb",
-			"browser_download_url.*deb",
-			"amd64",
-			":",
-		),
-		"sudo apt --yes install ./cedana_client.deb",
-		"rm cedana_client.deb",
-	}
-	b = append(b, cedanaSteps...)
-
-	criuSteps := []string{
-		"sudo add-apt-repository ppa:criu/ppa",
-		"sudo apt-get update && sudo apt-get --yes install criu",
-	}
-	b = append(b, criuSteps...)
-
-	envSteps := []string{
-		// set instance-id, ec2 instances aren't self-aware (yet)
-		fmt.Sprintf("echo export CEDANA_JOB_ID=%s >> /home/%s/.bashrc", is.job.JobID, user),
-		fmt.Sprintf("echo export CEDANA_AUTH_TOKEN=%s >> /home/%s/.bashrc", is.cfg.Connection.AuthToken, user),
-		fmt.Sprintf("echo export CEDANA_CLIENT_ID=%s >> /home/%s/.bashrc", is.instance.CedanaID, user),
-		fmt.Sprintf("source /home/%s/.bashrc", user),
-	}
-	b = append(b, envSteps...)
-
-	// first-time config setup step
-	is.logger.Info().Msg("Building first time config...")
-	client_config := utils.BuildClientConfig(is.jobFile)
-	cc_marshaled, err := json.Marshal(client_config)
-	if err != nil {
-		is.logger.Fatal().Err(err).Msg("error marshalling json")
-	}
-	escapedJSON := strconv.Quote(string(cc_marshaled))
-
-	configSteps := []string{
-		fmt.Sprintf("mkdir -p /home/%s/.cedana/", user),
-		fmt.Sprintf("touch /home/%s/.cedana/server_overrides.json", user),
-		fmt.Sprintf("echo %s | tee /home/%s/.cedana/server_overrides.json", escapedJSON, user),
-	}
-	b = append(b, configSteps...)
-	return b
-}
-
-func (is *InstanceSetup) buildCedanaDaemonCommands(b *[]string, user string) {
-	// start daemon
-	// same thing here as below - something funky is going on with the way ssh deals with env vars.
-	// TODO NR: look into this
-	// sshing and running commands directly is finnicky.
-	// a less flakey solution is directly creating a systemctl service, although this has it's downsides too.
-	// going with that for now
-
-	// We set user to ubuntu to give the daemon access to the home folder (so it can load config)
-	// TODO NR - this fails immediately for some reason (config isn't set?) but succeeds after a retry.
-	// We also timeout immediately because the daemon is forking and we don't want it holding up the setup forever.
-	systemctlEntry := fmt.Sprintf(`
-[Unit]
-Description=Cedana Worker Daemon
-After=network.target
-
-[Service]
-Type=forking
-ExecStart=/usr/bin/cedana client daemon
-Environment=CEDANA_JOB_ID=%s CEDANA_AUTH_TOKEN=%s CEDANA_CLIENT_ID=%s USER=%s
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-`, is.job.JobID, is.cfg.Connection.AuthToken, is.instance.CedanaID, user)
-
-	systemctlEntry = strings.ReplaceAll(systemctlEntry, `"`, `\"`)
-
-	daemonStart := []string{
-		// using a here-document because the multi-line file gets weird when echoing
-		// we also don't start the service because it hangs - TODO this is something to fix!
-		fmt.Sprintf("sudo tee /etc/systemd/system/cedana.service > /dev/null << EOF\n%s\nEOF", systemctlEntry),
-		"sudo systemctl enable cedana.service",
-	}
-	*b = append(*b, daemonStart...)
-}
-
-func (is *InstanceSetup) startCedanaDaemonCommand(b *[]string) {
-	daemonStart := []string{
-		"sudo systemctl start cedana.service &",
-	}
-	*b = append(*b, daemonStart...)
 }
 
 // Attaches user specified comments (specified as yaml) to a

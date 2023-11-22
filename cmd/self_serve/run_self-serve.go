@@ -77,7 +77,7 @@ func (r *Runner) cleanRunner() {
 
 var runSelfServeCmd = &cobra.Command{
 	Use:   "self-serve",
-	Short: "Run your workloads locally, using NATS and Jetstream",
+	Short: "Run your workloads, bringing your own clouds.",
 }
 
 var runCmd = &cobra.Command{
@@ -133,71 +133,6 @@ var integrationCmd = &cobra.Command{
 				return err
 			}
 			return nil
-		}
-
-		return nil
-	},
-}
-
-var retryCmd = &cobra.Command{
-	Use:   "retry",
-	Short: "Retry a failed setup from jobID [job-id]",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		r := buildRunner()
-		defer r.cleanRunner()
-
-		jobID := args[0]
-
-		// check db for existing job
-		job := r.db.GetJob(jobID)
-		if job == nil {
-			return fmt.Errorf("could not find job with id %s", jobID)
-		}
-
-		r.job = job
-
-		switch job.State {
-		case core.JobSetupFailed:
-			attachedInstanceIDs, err := job.GetInstanceIds()
-			if err != nil {
-				return err
-			}
-
-			var worker cedana.Instance
-
-			for _, i := range attachedInstanceIDs {
-				instance := r.db.GetInstanceByCedanaID(i.InstanceID)
-				if instance.Tag == "worker" {
-					worker = instance
-				}
-			}
-
-			err = r.retryJob(worker)
-			if err != nil {
-				return err
-			}
-
-		case core.JobStartupFailed:
-			// client is waiting for a retry command.
-			// user knows job failed due to incorrect setup (can check the jobtable)
-			// not ideal, good for now
-
-			// setup is complete, just resend task as a recovery command
-			w, err := NewWhisperer(job.JobID)
-			if err != nil {
-				return err
-			}
-
-			jobFile, err := cedana.InitJobFile(r.job.JobFilePath)
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not set up cedana job")
-			}
-
-			err = w.sendRetryCommand(jobFile)
-			if err != nil {
-				return err
-			}
 		}
 
 		return nil
@@ -319,118 +254,6 @@ var destroyAllCmd = &cobra.Command{
 	},
 }
 
-var restoreCmd = &cobra.Command{
-	Use:   "restore",
-	Short: "Manually restore a previously checkpoint onto a new instance",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		r := buildRunner()
-		defer r.cleanRunner()
-
-		jobID := args[0]
-
-		err := r.restoreJob(jobID)
-		if err != nil {
-			return err
-		}
-
-		r.logger.Info().Msgf("restored job %s onto new instance at time %s!", jobID, time.Now().Format(time.RFC3339))
-
-		return nil
-	},
-}
-
-// very basic retry of a failed setup, allows users to play with the yaml without
-// needing to tear down and redeploy
-func (r *Runner) retryJob(worker cedana.Instance) error {
-	is := BuildInstanceSetup(worker, *r.job)
-
-	err := is.ClientSetup()
-
-	if err != nil {
-		r.logger.Info().Msgf("could not set up client, retry using `./cedana-cli setup -i %s -j %s`", worker.CedanaID, "yourjob.yml")
-		r.db.UpdateJobState(r.job, core.JobSetupFailed)
-		return err
-	}
-
-	r.db.UpdateJobState(r.job, core.JobRunning)
-
-	// job is orchestrated by a local worker
-	orch, err := r.db.CreateInstance(&cedana.Instance{
-		Provider:    "local",
-		IPAddress:   "0.0.0.0",
-		Tag:         "orchestrator",
-		State:       "running",
-		AllocatedID: "local",
-	})
-
-	r.db.AttachInstanceToJob(r.job, *orch)
-
-	if err != nil {
-		return err
-	}
-
-	cd := NewCLIDaemon()
-	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID)
-
-	return nil
-
-}
-
-// restoreJob manually restores the most recent checkpoint onto a new instance
-func (r *Runner) restoreJob(jobID string) error {
-	// validate that job exists
-	job := r.db.GetJob(jobID)
-	if job == nil {
-		r.logger.Fatal().Err(fmt.Errorf("could not find job with id %s", jobID))
-	}
-	// validate that attached instance is destroyed
-	attachedInstanceIDs, err := job.GetInstanceIds()
-
-	if err != nil || len(attachedInstanceIDs) == 0 {
-		r.logger.Fatal().Msgf("Could not get attached instances for job: %s", job.JobID)
-	}
-
-	var oldWorker cedana.Instance
-	for _, i := range attachedInstanceIDs {
-		instance := r.db.GetInstanceByCedanaID(i.InstanceID)
-		if instance.Tag == "worker" {
-			oldWorker = instance
-		}
-		if oldWorker.State != "destroyed" {
-			r.logger.Fatal().Msgf("Instance %s is not destroyed", i.InstanceID)
-		}
-	}
-	r.logger.Debug().Msgf("old worker: %+v", oldWorker)
-
-	// spin up new instance and attach to job
-	r.job = job
-	// TODO NR - this needs to be somewhere else!
-	jobFile, err := cedana.InitJobFile(r.job.JobFilePath)
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("could not set up cedana job")
-	}
-	r.jobFile = jobFile
-
-	candidates := market.Optimize(r.jobFile)
-	worker, err := r.deployWorker(candidates)
-	if err != nil {
-		r.logger.Fatal().Err(err).Msg("could not deploy worker")
-		return err
-	}
-
-	w, err := NewWhisperer(job.JobID)
-	if err != nil {
-		return err
-	}
-	defer w.cleanup()
-	w.orch.AttachNewWorker(worker.CedanaID)
-	w.sendRestoreCommand(r.job.JobID, true)
-
-	return nil
-
-}
-
 /*
 Runs a job for the self serve model of Cedana.
 We don't deploy an orchestrator to the cloud (instead we run it locally in a daemon) and pass through our NATS.
@@ -446,32 +269,15 @@ func (r *Runner) runJobSelfServe() error {
 	r.logger.Info().Msg("setting up job...")
 	r.db.UpdateJobState(r.job, core.JobPending)
 
-	worker, err := r.deployWorker(candidates)
+	_, err = r.deployWorker(candidates)
 	if err != nil {
 		r.logger.Fatal().Err(err).Msg("could not deploy worker")
 		return err
 	}
 
-	// job is orchestrated by a local worker
-	orch, err := r.db.CreateInstance(&cedana.Instance{
-		Provider:    "local",
-		IPAddress:   "0.0.0.0",
-		Tag:         "orchestrator",
-		State:       "running",
-		AllocatedID: "local",
-	})
-
-	r.db.AttachInstanceToJob(r.job, *orch)
-
 	if err != nil {
 		return err
 	}
-
-	// daemon has a separate instance of the runner - should we be passing
-	// self to it? TODO NR, probably some perf gains here
-	cd := NewCLIDaemon()
-	cd.Start(orch.CedanaID, r.job.JobID, worker.CedanaID)
-
 	return nil
 }
 
@@ -787,6 +593,4 @@ func init() {
 	runSelfServeCmd.AddCommand(destroyCmd)
 	runSelfServeCmd.AddCommand(showInstancesCmd)
 	runSelfServeCmd.AddCommand(destroyAllCmd)
-	runSelfServeCmd.AddCommand(restoreCmd)
-	runSelfServeCmd.AddCommand(retryCmd)
 }

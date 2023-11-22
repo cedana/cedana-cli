@@ -32,21 +32,6 @@ var statusCmd = &cobra.Command{
 	},
 }
 
-// view into checkpoints taken for a job
-var checkpointsCmd = &cobra.Command{
-	Use:   "checkpoints",
-	Short: "show checkpoints taken for a Cedana job",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// get files from object store
-
-		// pretty print checkpoints
-		return nil
-	},
-}
-
-func prettyPrintCheckpoints() {
-}
-
 func init() {
 	runSelfServeCmd.AddCommand(jobCmd)
 	jobCmd.AddCommand(purgeJobsCmd)
