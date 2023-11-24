@@ -76,7 +76,7 @@ var runCmd = &cobra.Command{
 		r.job = r.db.CreateJob(r.jobFile)
 
 		// TODO NR - expand later to bring in managed service
-		if r.cfg.SelfServe {
+		if !r.cfg.CedanaManaged {
 			err = r.runJobSelfServe()
 			if err != nil {
 				return err
@@ -105,7 +105,7 @@ var integrationCmd = &cobra.Command{
 		r.job = r.db.CreateJob(r.jobFile)
 
 		// TODO NR - expand later to bring in managed service
-		if r.cfg.SelfServe {
+		if !r.cfg.CedanaManaged {
 			err = r.runJobSelfServe()
 			if err != nil {
 				return err

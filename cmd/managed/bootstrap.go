@@ -1,0 +1,5 @@
+package managed
+
+func bootstrapRequest() {
+
+}
