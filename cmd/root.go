@@ -32,7 +32,7 @@ func Execute() error {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "c", "", "path to cedana-config json file, including file name (ex. --cedana-config /Users/me/.cedana/myconfig.json)")
+	RootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "c", "", "path to cedana-config json file")
 }
 
 func initConfig() {

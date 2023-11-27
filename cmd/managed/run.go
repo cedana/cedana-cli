@@ -42,7 +42,7 @@ func BuildRunner() *Runner {
 	}
 }
 
-var runJobManaged = &cobra.Command{
+var managedCmd = &cobra.Command{
 	Use:   "managed",
 	Short: "Run your workloads on the Cedana system.",
 }
@@ -112,12 +112,19 @@ func (r *Runner) setupTaskRequest(encodedJob, taskLabel string) error {
 
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	r.logger.Info().Msgf("Task set up with response: %s", string(respBody))
+
 	return err
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(runJobManaged)
-	runJobManaged.AddCommand(setupTaskCmd)
+	cmd.RootCmd.AddCommand(managedCmd)
+	managedCmd.AddCommand(setupTaskCmd)
 
 	setupTaskCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file")
 }

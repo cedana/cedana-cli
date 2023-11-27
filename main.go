@@ -4,6 +4,7 @@ package main
 // because it's not imported anywhere else.
 import (
 	"github.com/cedana/cedana-cli/cmd"
+	_ "github.com/cedana/cedana-cli/cmd/managed"
 	_ "github.com/cedana/cedana-cli/cmd/self_serve"
 )
 
