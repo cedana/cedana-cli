@@ -6,5 +6,5 @@ import (
 
 // used in main.go to set version info
 func SetVersionInfo(version, commit, date string) {
-	rootCmd.Version = fmt.Sprintf("%s (%s)", version, commit)
+	RootCmd.Version = fmt.Sprintf("%s (%s)", version, commit)
 }

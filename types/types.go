@@ -46,9 +46,6 @@ type JobFile struct {
 	RestoredTask      Commands          `mapstructure:"restored_task"`
 }
 
-type Storage struct {
-}
-
 // foreign keys are weird in GORM, just attach InstanceIDs for now
 type Job struct {
 	gorm.Model
@@ -116,15 +113,6 @@ const (
 	CheckpointReasonInstanceTermination CheckpointReason = "instance_termination"
 	CheckpointReasonJobTermination      CheckpointReason = "job_termination"
 	CheckpointReasonHeartbeat           CheckpointReason = "heartbeat"
-)
-
-type CheckpointState string
-
-const (
-	CheckpointSuccess CheckpointState = "CHECKPOINTED"
-	CheckpointFailed  CheckpointState = "CHECKPOINT_FAILED"
-	RestoreSuccess    CheckpointState = "RESTORED"
-	RestoreFailed     CheckpointState = "RESTORE_FAILED"
 )
 
 func InitJobFile(filepath string) (*JobFile, error) {

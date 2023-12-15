@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"os"
@@ -102,5 +102,5 @@ func (m *Metrics) prettyPrintYTDMetrics() {
 
 func init() {
 	metricsCmd.Flags().BoolVarP(&showYtdMetrics, "ytd", "y", false, "Show YTD metrics")
-	rootCmd.AddCommand(metricsCmd)
+	runSelfServeCmd.AddCommand(metricsCmd)
 }

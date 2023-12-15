@@ -1,15 +1,15 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/cedana/cedana-cli/utils"
+	"github.com/spf13/cobra"
 )
 
 var cedanaConfigFile string
 
 var (
 	// Used for flags.
-	rootCmd = &cobra.Command{
+	RootCmd = &cobra.Command{
 		Use:   "cedana-cli",
 		Short: "Instance brokerage and orchestration system for Cedana",
 		Long: `________  _______   ________  ________  ________   ________     
@@ -27,12 +27,12 @@ var (
 )
 
 func Execute() error {
-	return rootCmd.Execute()
+	return RootCmd.Execute()
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "c", "", "path to cedana-config json file, including file name (ex. --cedana-config /Users/me/.cedana/myconfig.json)")
+	RootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "c", "", "path to cedana-config json file")
 }
 
 func initConfig() {

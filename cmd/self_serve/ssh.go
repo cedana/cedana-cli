@@ -1,4 +1,4 @@
-package cmd
+package self_serve
 
 import (
 	"fmt"
@@ -66,6 +66,6 @@ var sshCommand = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(sshCommand)
+	runSelfServeCmd.AddCommand(sshCommand)
 	sshCommand.Flags().StringVarP(&tunnel, "tunnel", "t", "", "tunnel FROM:TO (e.g 8080:localhost:4999)")
 }
