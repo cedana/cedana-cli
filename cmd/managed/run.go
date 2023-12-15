@@ -96,7 +96,9 @@ func (r *Runner) setupTaskRequest(encodedJob, taskLabel string) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", "http://localhost:1325/rpc", bytes.NewBuffer(jsonBody))
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/rpc"
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return err
 	}

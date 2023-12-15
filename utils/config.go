@@ -29,8 +29,9 @@ type CedanaConfig struct {
 }
 
 type ManagedConfig struct {
-	Username  string `json:"username" mapstructure:"username"`
-	AuthToken string `json:"auth_token" mapstructure:"auth_token"`
+	MarketServiceUrl string `json:"market_service_url" mapstructure:"market_service_url"`
+	Username         string `json:"username" mapstructure:"username"`
+	AuthToken        string `json:"auth_token" mapstructure:"auth_token"`
 }
 
 type AWSConfig struct {
@@ -130,12 +131,10 @@ func isEnabledProvidersValid(config CedanaConfig) error {
 // Used in bootstrap to create a placeholder config
 func CreateCedanaConfig(path string) error {
 	sc := &CedanaConfig{
-		AWSConfig: AWSConfig{
-			SSHKeyPath:              "",
-			LaunchTemplateName:      "",
-			ImageId:                 "",
-			EnabledInstanceFamilies: []string{"t2"}, // basic instance family
-			EnabledRegions:          []string{},
+		ManagedConfig: ManagedConfig{
+			MarketServiceUrl: "https://market.cedana.com",
+			Username:         "",
+			AuthToken:        "",
 		},
 	}
 
