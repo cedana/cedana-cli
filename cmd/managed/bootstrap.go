@@ -21,7 +21,7 @@ var registerCmd = &cobra.Command{
 	Short: "register user with managed platform for access to Cedana",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := utils.GetLogger()
-		
+
 		err := createConfig()
 		if err != nil {
 			logger.Fatal().Err(err).Msg("could not create config")
@@ -224,7 +224,7 @@ func (r *Runner) register(email string) (string, error) {
 		return "", err
 	}
 
-	r.logger.Info().Msgf("Registered user email %s, received unique token %s", reg.Email, regResp.Owner)
+	r.logger.Info().Msgf("Registered user email %s, received unique token %s", reg.Email, regResp.Token)
 	r.logger.Info().Msgf("setting info in config...")
 
 	viper.Set("managed_config.username", reg.Email)
@@ -258,7 +258,7 @@ func (r *Runner) validateRegistration(password, confirm, token string) error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + r.cfg.ManagedConfig.UserID + "/validation"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/registration/" + r.cfg.ManagedConfig.UserID + "/validation"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -302,7 +302,7 @@ func (r *Runner) generateJWT(password string) (string, error) {
 		return "", err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + r.cfg.ManagedConfig.UserID + "/jwt"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/registration/" + r.cfg.ManagedConfig.UserID + "/jwt"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -320,7 +320,7 @@ func (r *Runner) generateJWT(password string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+		return "", fmt.Errorf("request failed with status code: %d and error: %s", resp.StatusCode, err)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -380,8 +380,8 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	if err != nil {
+		return fmt.Errorf("request failed with status code: %d and error: %s", resp.StatusCode, err.Error())
 	}
 
 	r.logger.Info().Msgf("Bootstrap completed")
