@@ -31,6 +31,8 @@ type CedanaConfig struct {
 type ManagedConfig struct {
 	MarketServiceUrl string `json:"market_service_url" mapstructure:"market_service_url"`
 	Username         string `json:"username" mapstructure:"username"`
+	UserID           string `json:"user_id" mapstructure:"user_id"`
+	Password         string `json:"password" mapstructure:"password"`
 	AuthToken        string `json:"auth_token" mapstructure:"auth_token"`
 }
 
