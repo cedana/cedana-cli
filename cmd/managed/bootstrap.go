@@ -20,20 +20,9 @@ var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "register user with managed platform for access to Cedana",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := utils.InitCedanaConfig()
-		if err != nil {
-			return err
-		}
-
-		user := cfg.ManagedConfig.Username
-		if user == "" {
-			return fmt.Errorf("username not set in config")
-		}
-
 		logger := utils.GetLogger()
-		logger.Info().Msg("bootstrapping system with sample config...")
-
-		err = createConfig()
+		
+		err := createConfig()
 		if err != nil {
 			logger.Fatal().Err(err).Msg("could not create config")
 		}
@@ -167,8 +156,16 @@ func createConfig() error {
 
 	_, err = os.OpenFile(filepath.Join(homeDir, "/.cedana/cedana_config.json"), 0, 0o644)
 	if errors.Is(err, os.ErrNotExist) {
+		username := ""
+		prompt := promptui.Prompt{
+			Label: "Enter username",
+		}
+		username, err = prompt.Run()
+		if err != nil {
+			return err
+		}
 		// copy template, use viper to set programatically
-		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"))
+		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"), username)
 		if err != nil {
 			return err
 		}

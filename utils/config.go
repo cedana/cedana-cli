@@ -131,7 +131,7 @@ func isEnabledProvidersValid(config CedanaConfig) error {
 }
 
 // Used in bootstrap to create a placeholder config
-func CreateCedanaConfig(path string) error {
+func CreateCedanaConfig(path, username string) error {
 	sc := &CedanaConfig{
 		ManagedConfig: ManagedConfig{
 			MarketServiceUrl: "https://market.cedana.com",

@@ -69,7 +69,7 @@ func (b *Bootstrap) createConfig() error {
 	if errors.Is(err, os.ErrNotExist) {
 		b.l.Info().Msg("cedana_config.json does not exist, creating template")
 		// copy template, use viper to set programatically
-		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"))
+		err = utils.CreateCedanaConfig(filepath.Join(configFolderPath, "cedana_config.json"), "")
 		if err != nil {
 			b.l.Fatal().Err(err).Msg("could not create cedana_config")
 		}
