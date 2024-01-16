@@ -19,6 +19,7 @@ import (
 var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "register user with managed platform for access to Cedana",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := utils.GetLogger()
 
@@ -28,6 +29,13 @@ var registerCmd = &cobra.Command{
 		}
 
 		r := BuildRunner()
+
+		// using arg, set url
+		viper.Set("managed_config.market_service_url", args[0])
+		err = viper.WriteConfig()
+		if err != nil {
+			logger.Fatal().Err(err).Msg("could not write config")
+		}
 
 		// if username and pass is unset, prompt for it
 		if r.cfg.ManagedConfig.UserID == "" {
