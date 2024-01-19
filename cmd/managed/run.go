@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -24,6 +25,14 @@ type Runner struct {
 	cfg       *utils.CedanaConfig
 	logger    *zerolog.Logger
 	providers map[string]cedana.Provider
+}
+
+type Task struct {
+	Owner  string `json:"owner"`
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	Status string `json:"status"`
+	Config string `json:"config"`
 }
 
 func BuildRunner() *Runner {
@@ -71,32 +80,62 @@ var setupTaskCmd = &cobra.Command{
 
 		encodedJob := base64.StdEncoding.EncodeToString(contents)
 
-		err = r.setupTaskRequest(encodedJob, args[0])
+		err = r.setupTask(encodedJob, args[0])
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not setup task")
 		}
 	},
 }
 
-func (r *Runner) setupTaskRequest(encodedJob, taskLabel string) error {
-	// Define the request body
-	body := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      1,
-		"method":  "SetupTask",
-		"params": []interface{}{
-			r.cfg.ManagedConfig.Username,
-			encodedJob,
-			taskLabel,
-		},
+var listTasksCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all tasks",
+	Args:  cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
+		r := BuildRunner()
+
+		err := r.listTask()
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not list tasks")
+		}
+	},
+}
+
+var runTaskCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run a previously setup task",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		r := BuildRunner()
+
+		err := r.runTask(args[0])
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not run task")
+		}
+	},
+}
+
+type setupTaskRequest struct {
+	TaskConfig string `json:"task_config"`
+	TaskLabel  string `json:"label"`
+}
+
+type setupTaskResponse struct {
+	TaskID string `json:"task_id"`
+}
+
+func (r *Runner) setupTask(encodedJob, taskLabel string) error {
+	st := setupTaskRequest{
+		TaskConfig: encodedJob,
+		TaskLabel:  taskLabel,
 	}
 
-	jsonBody, err := json.Marshal(body)
+	jsonBody, err := json.Marshal(st)
 	if err != nil {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/rpc"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -104,7 +143,7 @@ func (r *Runner) setupTaskRequest(encodedJob, taskLabel string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer random-user")
+	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -114,19 +153,104 @@ func (r *Runner) setupTaskRequest(encodedJob, taskLabel string) error {
 
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
+	var str setupTaskResponse
+	err = json.NewDecoder(resp.Body).Decode(&str)
 	if err != nil {
 		return err
 	}
 
-	r.logger.Info().Msgf("Task set up with response: %s", string(respBody))
+	fmt.Printf("Task created with ID: %s", str.TaskID)
 
-	return err
+	return nil
+}
+
+type listTaskResponse struct {
+	Tasks []Task `json:"tasks"`
+}
+
+func (r *Runner) listTask() error {
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
+	var str listTaskResponse
+	err = json.NewDecoder(resp.Body).Decode(&str)
+	if err != nil {
+		return err
+	}
+
+	for _, t := range str.Tasks {
+		fmt.Printf("Task ID: %s, Label: %s\n", t.ID, t.Label)
+	}
+
+	return nil
+}
+
+type runTaskResponse struct {
+	InstanceID string `json:"cloud_instance_id"`
+}
+
+func (r *Runner) runTask(taskLabel string) error {
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task/" + taskLabel + "/run"
+
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
+	var rtr runTaskResponse
+	err = json.NewDecoder(resp.Body).Decode(&rtr)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Task started on instance with ID: ", rtr.InstanceID)
+
+	return nil
 }
 
 func init() {
 	cmd.RootCmd.AddCommand(managedCmd)
 	managedCmd.AddCommand(setupTaskCmd)
+	managedCmd.AddCommand(listTasksCmd)
+	managedCmd.AddCommand(runTaskCmd)
 
 	setupTaskCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file")
 }

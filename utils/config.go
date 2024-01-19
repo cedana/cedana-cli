@@ -37,6 +37,8 @@ type ManagedConfig struct {
 }
 
 type AWSConfig struct {
+	AccessKeyID             string   `json:"access_key_id" mapstructure:"access_key_id"`
+	SecretAccessKey         string   `json:"secret_access_key" mapstructure:"secret_access_key"`
 	EnabledRegions          []string `json:"enabled_regions" mapstructure:"enabled_regions"`
 	EnabledInstanceFamilies []string `json:"enabled_instance_families" mapstructure:"enabled_instance_families"`
 }
@@ -135,7 +137,7 @@ func CreateCedanaConfig(path, username string) error {
 			AuthToken:        "",
 		},
 		EnabledProviders: []string{""},
-		AWSConfig: AWSConfig{},
+		AWSConfig:        AWSConfig{},
 		PaperspaceConfig: PaperspaceConfig{},
 	}
 

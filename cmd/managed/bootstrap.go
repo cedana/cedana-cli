@@ -165,11 +165,23 @@ var bootstrapCmd = &cobra.Command{
 			cInfo = append(cInfo, info)
 		}
 
-		r.logger.Info().Msgf("sending provider specs to cedana market bootstrap...")
+		r.logger.Info().Msgf("cinfo = %+v", cInfo)
 		err := r.bootstrap(cInfo, true)
 		if err != nil {
 			return err
 		}
+
+		for _, info := range cInfo {
+			switch info.Name {
+			case "aws":
+				r.logger.Info().Msgf("setting credentials for AWS")
+				err = r.setCredentialsAWS()
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		return nil
 	},
 }
@@ -241,7 +253,7 @@ func (r *Runner) register(email string) (*registerResponse, error) {
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 
@@ -378,7 +390,7 @@ type CloudInfo struct {
 
 type bootstrapRequest struct {
 	SessionToken string      `json:"-"`
-	CloudInfo    []CloudInfo `json:"cloudInfo"`
+	CloudInfo    []CloudInfo `json:"cloud_info"`
 	LeaveRunning bool        `json:"leaveRunning"`
 }
 
@@ -394,7 +406,7 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + r.cfg.ManagedConfig.UserID + "/bootstrap"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/bootstrap"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -417,6 +429,58 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 	}
 
 	r.logger.Info().Msgf("Bootstrap completed")
+	return nil
+}
+
+type setCredentialsRequestAWS struct {
+	AccessKeyID string `json:"access_key_id"`
+	SecretKey   string `json:"secret_access_key"`
+}
+
+func (r *Runner) setCredentialsAWS() error {
+	if r.cfg.AWSConfig.AccessKeyID == "" || r.cfg.AWSConfig.SecretAccessKey == "" {
+		return fmt.Errorf("AWS credentials not set")
+	}
+
+	scr := setCredentialsRequestAWS{
+		AccessKeyID: r.cfg.AWSConfig.AccessKeyID,
+		SecretKey:   r.cfg.AWSConfig.SecretAccessKey,
+	}
+
+	jsonBody, err := json.Marshal(scr)
+	if err != nil {
+		return err
+	}
+
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/cloud/" + "aws" + "/credentials"
+
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
+	r.logger.Info().Msgf("AWS credentials set with response %s", string(body))
+
 	return nil
 }
 
