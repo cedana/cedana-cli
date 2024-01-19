@@ -20,29 +20,27 @@ var ValidProviders = []string{
 }
 
 type CedanaConfig struct {
-	SelfServe        bool                `json:"self_serve" mapstructure:"self_serve"`
-	EnabledProviders []string            `json:"enabled_providers" mapstructure:"enabled_providers"`
-	KeepRunning      bool                `json:"keep_running" mapstructure:"keep_running"`
-	AWSConfig        AWSConfig           `json:"aws" mapstructure:"aws"`
-	PaperspaceConfig PaperspaceConfig    `json:"paperspace" mapstructure:"paperspace"`
-	Checkpoint       Checkpoint          `json:"checkpoint" mapstructure:"checkpoint"`
-	SharedStorage    SharedStorageConfig `json:"shared_storage" mapstructure:"shared_storage"`
-	Connection       Connection          `json:"connection" mapstructure:"connection"`
+	CedanaManaged    bool             `json:"cedana_managed" mapstructure:"cedana_managed"`
+	ManagedConfig    ManagedConfig    `json:"managed_config" mapstructure:"managed_config"`
+	EnabledProviders []string         `json:"enabled_providers" mapstructure:"enabled_providers"`
+	KeepRunning      bool             `json:"keep_running" mapstructure:"keep_running"`
+	AWSConfig        AWSConfig        `json:"aws" mapstructure:"aws"`
+	PaperspaceConfig PaperspaceConfig `json:"paperspace" mapstructure:"paperspace"`
 }
 
-type Connection struct {
-	NATSUrl   string `json:"nats_url" mapstructure:"nats_url"`
-	NATSPort  int    `json:"nats_port" mapstructure:"nats_port"`
-	AuthToken string `json:"auth_token" mapstructure:"auth_token"`
+type ManagedConfig struct {
+	MarketServiceUrl string `json:"market_service_url" mapstructure:"market_service_url"`
+	Username         string `json:"username" mapstructure:"username"`
+	UserID           string `json:"user_id" mapstructure:"user_id"`
+	Password         string `json:"password" mapstructure:"password"`
+	AuthToken        string `json:"auth_token" mapstructure:"auth_token"`
 }
 
 type AWSConfig struct {
-	SSHKeyPath              string   `json:"ssh_key_path" mapstructure:"ssh_key_path"` // path to AWS identity key
+	AccessKeyID             string   `json:"access_key_id" mapstructure:"access_key_id"`
+	SecretAccessKey         string   `json:"secret_access_key" mapstructure:"secret_access_key"`
 	EnabledRegions          []string `json:"enabled_regions" mapstructure:"enabled_regions"`
 	EnabledInstanceFamilies []string `json:"enabled_instance_families" mapstructure:"enabled_instance_families"`
-	LaunchTemplateName      string   `json:"launch_template" mapstructure:"launch_template"`
-	ImageId                 string   `json:"image_id" mapstructure:"image_id"` // AMI image id
-	User                    string   `json:"user" mapstructure:"user"`         // user if using a custom AMI
 }
 
 type PaperspaceConfig struct {
@@ -53,24 +51,13 @@ type PaperspaceConfig struct {
 	User           string   `json:"user" mapstructure:"user"`
 }
 
-type SharedStorageConfig struct {
-	DumpStorageDir string `json:"dump_storage_dir" mapstructure:"dump_storage_dir"`
-	MountPoint     string `json:"mount_point" mapstructure:"mount_point"`
-}
-
-type Checkpoint struct {
-	HeartbeatEnabled  bool `json:"heartbeat_enabled" mapstructure:"heartbeat_enabled"`
-	HeartbeatInterval int  `json:"heartbeat_interval_seconds" mapstructure:"heartbeat_interval_seconds"`
-}
-
 /*
-	configFile represents an override to the location of the cedana config file
+configFile represents an override to the location of the cedana config file
 */
 var configFile string = ""
 
-
 /*
-	SetConfigFile overrides the path to the cedana config file
+SetConfigFile overrides the path to the cedana config file
 */
 func SetConfigFile(c string) {
 	configFile = c
@@ -107,13 +94,13 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 			viper.SetConfigName("cedana_config")
 		}
 	}
-	
+
 	viper.AutomaticEnv()
 
 	var config CedanaConfig
 	err = viper.ReadInConfig()
 	if err != nil {
-		return nil, fmt.Errorf("error loading config file: %s. Make sure that config exists and that it's formatted correctly!", err)
+		return nil, fmt.Errorf("error loading config file: %s. Make sure that config exists and that it's formatted correctly", err)
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
@@ -136,25 +123,22 @@ func isEnabledProvidersValid(config CedanaConfig) error {
 		}
 	}
 	if invalid > 0 {
-		return fmt.Errorf("Invalid providers: %v", invalid)
+		return fmt.Errorf("invalid providers: %v", invalid)
 	}
 	return nil
 }
 
 // Used in bootstrap to create a placeholder config
-func CreateCedanaConfig(path string) error {
+func CreateCedanaConfig(path, username string) error {
 	sc := &CedanaConfig{
-		AWSConfig: AWSConfig{
-			SSHKeyPath:              "",
-			LaunchTemplateName:      "",
-			ImageId:                 "",
-			EnabledInstanceFamilies: []string{"t2"}, // basic instance family
-			EnabledRegions:          []string{},
+		ManagedConfig: ManagedConfig{
+			MarketServiceUrl: "https://market.cedana.com",
+			Username:         "",
+			AuthToken:        "",
 		},
-		Connection: Connection{
-			NATSUrl:  "demo.nats.io",
-			NATSPort: 8222,
-		},
+		EnabledProviders: []string{""},
+		AWSConfig:        AWSConfig{},
+		PaperspaceConfig: PaperspaceConfig{},
 	}
 
 	// marshal sc into path
