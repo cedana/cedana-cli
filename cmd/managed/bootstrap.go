@@ -31,10 +31,20 @@ var registerCmd = &cobra.Command{
 		r := BuildRunner()
 
 		// using arg, set url
+		if args[0] == "" {
+			return fmt.Errorf("no url provided")
+		}
+
 		viper.Set("managed_config.market_service_url", args[0])
 		err = viper.WriteConfig()
 		if err != nil {
 			logger.Fatal().Err(err).Msg("could not write config")
+		}
+
+		// reload config
+		r.cfg, err = utils.InitCedanaConfig()
+		if err != nil {
+			logger.Fatal().Err(err).Msg("could not set up config")
 		}
 
 		// if username and pass is unset, prompt for it
@@ -47,7 +57,7 @@ var registerCmd = &cobra.Command{
 				r.logger.Fatal().Err(err).Msg("error reading prompt input")
 			}
 
-			token, err := r.register(result)
+			regResp, err := r.register(result)
 			if err != nil {
 				r.logger.Fatal().Err(err).Msg("could not register user")
 			}
@@ -78,7 +88,16 @@ var registerCmd = &cobra.Command{
 				r.logger.Fatal().Err(err).Msg("error reading prompt input")
 			}
 
-			err = r.validateRegistration(password, password, token)
+			// set password in config
+			viper.Set("managed_config.password", password)
+			err = viper.WriteConfig()
+			if err != nil {
+				r.logger.Fatal().Err(err).Msg("could not write config")
+			}
+
+			r.logger.Info().Msgf("validating registration with token %s and owner %s", regResp.Token, regResp.Owner)
+
+			err = r.validateRegistration(password, password, regResp.Owner, regResp.Token)
 			if err != nil {
 				r.logger.Fatal().Err(err).Msg("could not finish registering user")
 			}
@@ -86,6 +105,11 @@ var registerCmd = &cobra.Command{
 
 		if r.cfg.ManagedConfig.AuthToken == "" {
 			r.logger.Info().Msgf("JWT Token missing, generating...")
+			// regen config - in case when full bootstrap flow happens, password isn't set
+			r.cfg, err = utils.InitCedanaConfig()
+			if err != nil {
+				r.logger.Fatal().Err(err).Msg("could not set up config")
+			}
 			jwt, err := r.generateJWT(r.cfg.ManagedConfig.Password)
 			if err != nil {
 				r.logger.Fatal().Err(err).Msg("could not generate JWT token")
@@ -110,7 +134,7 @@ var bootstrapCmd = &cobra.Command{
 		r := BuildRunner()
 
 		if r.cfg.EnabledProviders == nil || len(r.cfg.EnabledProviders) == 0 {
-			return fmt.Errorf("no providers specified in config, add provider-specific config, regions and try again.")
+			return fmt.Errorf("no providers specified in config, add provider-specific config and enabled providers, regions and try again.")
 		}
 
 		// assemble cloudInfo from enabledProviders
@@ -190,21 +214,21 @@ type registerResponse struct {
 	Owner string `json:"owner"`
 }
 
-func (r *Runner) register(email string) (string, error) {
+func (r *Runner) register(email string) (*registerResponse, error) {
 	reg := registerRequest{
 		Email: email,
 	}
 
 	jsonBody, err := json.Marshal(reg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	url := r.cfg.ManagedConfig.MarketServiceUrl + "/registration"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -212,24 +236,24 @@ func (r *Runner) register(email string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var regResp registerResponse
 	err = json.Unmarshal(body, &regResp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	r.logger.Info().Msgf("Registered user email %s, received unique token %s", reg.Email, regResp.Token)
@@ -240,7 +264,7 @@ func (r *Runner) register(email string) (string, error) {
 
 	viper.WriteConfig()
 
-	return regResp.Token, nil
+	return &regResp, nil
 
 }
 
@@ -250,7 +274,7 @@ type validateRegistrationRequest struct {
 	Token    string `json:"token"`
 }
 
-func (r *Runner) validateRegistration(password, confirm, token string) error {
+func (r *Runner) validateRegistration(password, confirm, uid, token string) error {
 	if password != confirm {
 		return fmt.Errorf("passwords do not match")
 	}
@@ -266,7 +290,7 @@ func (r *Runner) validateRegistration(password, confirm, token string) error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/registration/" + r.cfg.ManagedConfig.UserID + "/validation"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/registration/" + uid + "/validation"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -398,4 +422,5 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 
 func init() {
 	managedCmd.AddCommand(registerCmd)
+	managedCmd.AddCommand(bootstrapCmd)
 }

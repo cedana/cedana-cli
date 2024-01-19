@@ -37,12 +37,8 @@ type ManagedConfig struct {
 }
 
 type AWSConfig struct {
-	SSHKeyPath              string   `json:"ssh_key_path" mapstructure:"ssh_key_path"` // path to AWS identity key
 	EnabledRegions          []string `json:"enabled_regions" mapstructure:"enabled_regions"`
 	EnabledInstanceFamilies []string `json:"enabled_instance_families" mapstructure:"enabled_instance_families"`
-	LaunchTemplateName      string   `json:"launch_template" mapstructure:"launch_template"`
-	ImageId                 string   `json:"image_id" mapstructure:"image_id"` // AMI image id
-	User                    string   `json:"user" mapstructure:"user"`         // user if using a custom AMI
 }
 
 type PaperspaceConfig struct {
@@ -138,6 +134,9 @@ func CreateCedanaConfig(path, username string) error {
 			Username:         "",
 			AuthToken:        "",
 		},
+		EnabledProviders: []string{""},
+		AWSConfig: AWSConfig{},
+		PaperspaceConfig: PaperspaceConfig{},
 	}
 
 	// marshal sc into path

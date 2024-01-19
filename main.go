@@ -5,7 +5,6 @@ package main
 import (
 	"github.com/cedana/cedana-cli/cmd"
 	_ "github.com/cedana/cedana-cli/cmd/managed"
-	_ "github.com/cedana/cedana-cli/cmd/self_serve"
 )
 
 // these get set by goreleaser
