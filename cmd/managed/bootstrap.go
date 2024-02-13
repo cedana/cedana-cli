@@ -1,7 +1,9 @@
 package managed
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,16 +11,25 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/tidwall/gjson"
+	"golang.org/x/term"
+
+	ory "github.com/ory/client-go"
+	"github.com/ory/x/cmdx"
+	"github.com/ory/x/stringsx"
+	"github.com/tidwall/sjson"
 )
 
 var registerCmd = &cobra.Command{
-	Use:   "register",
-	Short: "register user with managed platform for access to Cedana",
+	Use:   "login",
+	Short: "login user with managed platform for access to Cedana",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logger := utils.GetLogger()
@@ -47,84 +58,104 @@ var registerCmd = &cobra.Command{
 			logger.Fatal().Err(err).Msg("could not set up config")
 		}
 
-		// if username and pass is unset, prompt for it
-		if r.cfg.ManagedConfig.UserID == "" {
-			prompt := promptui.Prompt{
-				Label: "Enter email address to register with",
-			}
-			result, err := prompt.Run()
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("error reading prompt input")
-			}
-
-			regResp, err := r.register(result)
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not register user")
-			}
-
-			prompt = promptui.Prompt{
-				Label: "Enter password",
-				Mask:  '*',
-			}
-
-			password, err := prompt.Run()
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("error reading prompt input")
-			}
-
-			confirmPrompt := promptui.Prompt{
-				Label: "Confirm password",
-				Mask:  '*',
-				Validate: func(input string) error {
-					if input != password {
-						return fmt.Errorf("passwords do not match")
-					}
-					return nil
-				},
-			}
-
-			_, err = confirmPrompt.Run()
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("error reading prompt input")
-			}
-
-			// set password in config
-			viper.Set("managed_config.password", password)
-			err = viper.WriteConfig()
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not write config")
-			}
-
-			r.logger.Info().Msgf("validating registration with token %s and owner %s", regResp.Token, regResp.Owner)
-
-			err = r.validateRegistration(password, password, regResp.Owner, regResp.Token)
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not finish registering user")
-			}
-		}
-
+		// if authToken unset, redirect user and get token
 		if r.cfg.ManagedConfig.AuthToken == "" {
-			r.logger.Info().Msgf("JWT Token missing, generating...")
-			// regen config - in case when full bootstrap flow happens, password isn't set
-			r.cfg, err = utils.InitCedanaConfig()
+			sessionToken, err := r.signin(cmd, cmd.Context(), "")
 			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not set up config")
+				return err
 			}
-			jwt, err := r.generateJWT(r.cfg.ManagedConfig.Password)
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not generate JWT token")
-			}
-
-			r.logger.Info().Msgf("Generated 24 hour expiring JWT: %s. All further requests are automatically authenticated using this token.", jwt)
-
-			viper.Set("managed_config.auth_token", jwt)
-			err = viper.WriteConfig()
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not write jwt to file")
-			}
+			fmt.Printf("sessionToken: %s\n", sessionToken)
 		}
+
 		return err
 	},
+}
+
+// returns sessionToken
+func (r *Runner) signin(cmd *cobra.Command, ctx context.Context, sessionToken string) (string, error) {
+	// init new ory client
+	cfg := ory.NewConfiguration()
+	cfg.Servers = ory.ServerConfigurations{
+		{
+			URL: "https://auth.cedana.com",
+		},
+	}
+	oryClient := ory.NewAPIClient(cfg)
+	req := oryClient.FrontendAPI.CreateNativeLoginFlow(ctx)
+	if len(sessionToken) > 0 {
+		req = req.XSessionToken(sessionToken).Aal("aal2")
+	}
+
+	flow, _, err := req.Execute()
+	if err != nil {
+		return "", err
+	}
+
+	var form interface{} = &ory.UpdateLoginFlowWithPasswordMethod{}
+	method := "password"
+	if len(sessionToken) > 0 {
+		var foundTOTP bool
+		var foundLookup bool
+		for _, n := range flow.Ui.Nodes {
+			if n.Group == "totp" {
+				foundTOTP = true
+			} else if n.Group == "lookup_secret" {
+				foundLookup = true
+			}
+		}
+		if !foundLookup && !foundTOTP {
+			return "", errors.New("only TOTP and lookup secrets are supported for two-step verification in the CLI")
+		}
+
+		method = "lookup_secret"
+		if foundTOTP {
+			form = &ory.UpdateLoginFlowWithTotpMethod{}
+			method = "totp"
+		}
+	}
+
+	type PasswordReader struct{}
+
+	pwReader := func() ([]byte, error) {
+		return term.ReadPassword(int(os.Stdin.Fd()))
+	}
+	if p, ok := cmd.Context().Value(PasswordReader{}).(passwordReader); ok {
+		pwReader = p
+	}
+
+	if err := renderForm(bufio.NewReader(cmd.InOrStdin()), pwReader, cmd.ErrOrStderr(), flow.Ui, method, form); err != nil {
+		return "", err
+	}
+
+	var body ory.UpdateLoginFlowBody
+	switch e := form.(type) {
+	case *ory.UpdateLoginFlowWithTotpMethod:
+		body.UpdateLoginFlowWithTotpMethod = e
+	case *ory.UpdateLoginFlowWithPasswordMethod:
+		body.UpdateLoginFlowWithPasswordMethod = e
+	default:
+		panic("unexpected type")
+	}
+
+	login, _, err := oryClient.FrontendAPI.UpdateLoginFlow(ctx).XSessionToken(sessionToken).
+		Flow(flow.Id).UpdateLoginFlowBody(body).Execute()
+	if err != nil {
+		return "", err
+	}
+
+	sessionToken = stringsx.Coalesce(*login.SessionToken, sessionToken)
+	_, _, err = oryClient.FrontendAPI.ToSession(ctx).XSessionToken(sessionToken).Execute()
+	if err == nil {
+		return sessionToken, nil
+	}
+
+	if e, ok := err.(interface{ Body() []byte }); ok {
+		switch gjson.GetBytes(e.Body(), "error.id").String() {
+		case "session_aal2_required":
+			return r.signin(cmd, ctx, sessionToken)
+		}
+	}
+	return "", err
 }
 
 var bootstrapCmd = &cobra.Command{
@@ -336,53 +367,6 @@ type generateJWTResponse struct {
 	JWT string `json:"jwt"`
 }
 
-func (r *Runner) generateJWT(password string) (string, error) {
-	gjwt := generateJWTRequest{
-		Password: password,
-	}
-
-	jsonBody, err := json.Marshal(gjwt)
-	if err != nil {
-		return "", err
-	}
-
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/registration/" + r.cfg.ManagedConfig.UserID + "/jwt"
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("request failed with status code: %d and error: %s", resp.StatusCode, err)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var gjwtResp generateJWTResponse
-	err = json.Unmarshal(body, &gjwtResp)
-	if err != nil {
-		return "", err
-	}
-
-	r.logger.Info().Msgf("Received JWT: %s", gjwtResp.JWT)
-
-	return gjwtResp.JWT, nil
-}
-
 type CloudInfo struct {
 	Name    string   `json:"name"`
 	Regions []string `json:"regions"`
@@ -406,7 +390,7 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/bootstrap"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/bootstrap"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -452,7 +436,7 @@ func (r *Runner) setCredentialsAWS() error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/cloud/" + "aws" + "/credentials"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/cloud/" + "aws" + "/credentials"
 
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -482,6 +466,126 @@ func (r *Runner) setCredentialsAWS() error {
 	r.logger.Info().Msgf("AWS credentials set with response %s", string(body))
 
 	return nil
+}
+
+type passwordReader = func() ([]byte, error)
+
+func getLabel(attrs *ory.UiNodeInputAttributes, node *ory.UiNode) string {
+	if attrs.Name == "identifier" {
+		return fmt.Sprintf("%s: ", "Email")
+	} else if node.Meta.Label != nil {
+		return fmt.Sprintf("%s: ", node.Meta.Label.Text)
+	} else if attrs.Label != nil {
+		return fmt.Sprintf("%s: ", attrs.Label.Text)
+	}
+	return fmt.Sprintf("%s: ", attrs.Name)
+}
+
+func renderForm(stdin *bufio.Reader, pwReader passwordReader, stderr io.Writer, ui ory.UiContainer, method string, out interface{}) (err error) {
+	for _, message := range ui.Messages {
+		_, _ = fmt.Fprintf(stderr, "%s\n", message.Text)
+	}
+
+	for _, node := range ui.Nodes {
+		for _, message := range node.Messages {
+			_, _ = fmt.Fprintf(stderr, "%s\n", message.Text)
+		}
+	}
+
+	values := json.RawMessage(`{}`)
+	for k := range ui.Nodes {
+		node := ui.Nodes[k]
+		if node.Group != method && node.Group != "default" {
+			continue
+		}
+
+		switch node.Type {
+		case "input":
+			attrs := node.Attributes.UiNodeInputAttributes
+			switch attrs.Type {
+			case "button":
+				continue
+			case "submit":
+				continue
+			}
+
+			if attrs.Name == "traits.consent.tos" {
+				for {
+					ok, err := cmdx.AskScannerForConfirmation(getLabel(attrs, &node), stdin, stderr)
+					if err != nil {
+						return err
+					}
+					if ok {
+						break
+					}
+				}
+				values, err = sjson.SetBytes(values, attrs.Name, time.Now().UTC().Format(time.RFC3339))
+				if err != nil {
+					return err
+				}
+				continue
+			}
+
+			if strings.Contains(attrs.Name, "traits.details") {
+				continue
+			}
+
+			switch attrs.Type {
+			case "hidden":
+				continue
+			case "checkbox":
+				result, err := cmdx.AskScannerForConfirmation(getLabel(attrs, &node), stdin, stderr)
+				if err != nil {
+					return err
+				}
+
+				values, err = sjson.SetBytes(values, attrs.Name, result)
+				if err != nil {
+					return err
+				}
+			case "password":
+				var password string
+				for password == "" {
+					_, _ = fmt.Fprint(stderr, getLabel(attrs, &node))
+					v, err := pwReader()
+					if err != nil {
+						return err
+					}
+					password = strings.ReplaceAll(string(v), "\n", "")
+					fmt.Println("")
+				}
+
+				values, err = sjson.SetBytes(values, attrs.Name, password)
+				if err != nil {
+					return err
+				}
+			default:
+				var value string
+				for value == "" {
+					_, _ = fmt.Fprint(stderr, getLabel(attrs, &node))
+					v, err := stdin.ReadString('\n')
+					if err != nil {
+						return err
+					}
+					value = strings.ReplaceAll(v, "\n", "")
+				}
+
+				values, err = sjson.SetBytes(values, attrs.Name, value)
+				if err != nil {
+					return err
+				}
+			}
+		default:
+			// Do nothing
+		}
+	}
+
+	values, err = sjson.SetBytes(values, "method", method)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func init() {

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/viper"
-	"k8s.io/utils/strings/slices"
 )
 
 var ValidProviders = []string{
@@ -30,9 +29,6 @@ type CedanaConfig struct {
 
 type ManagedConfig struct {
 	MarketServiceUrl string `json:"market_service_url" mapstructure:"market_service_url"`
-	Username         string `json:"username" mapstructure:"username"`
-	UserID           string `json:"user_id" mapstructure:"user_id"`
-	Password         string `json:"password" mapstructure:"password"`
 	AuthToken        string `json:"auth_token" mapstructure:"auth_token"`
 }
 
@@ -108,24 +104,7 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 		return nil, err
 	}
 
-	if err := isEnabledProvidersValid(config); err != nil {
-		return nil, err
-	}
-
 	return &config, nil
-}
-
-func isEnabledProvidersValid(config CedanaConfig) error {
-	var invalid int = 0
-	for _, enabled := range config.EnabledProviders {
-		if !slices.Contains(ValidProviders, enabled) {
-			invalid++
-		}
-	}
-	if invalid > 0 {
-		return fmt.Errorf("invalid providers: %v", invalid)
-	}
-	return nil
 }
 
 // Used in bootstrap to create a placeholder config
@@ -133,7 +112,6 @@ func CreateCedanaConfig(path, username string) error {
 	sc := &CedanaConfig{
 		ManagedConfig: ManagedConfig{
 			MarketServiceUrl: "https://market.cedana.com",
-			Username:         "",
 			AuthToken:        "",
 		},
 		EnabledProviders: []string{""},

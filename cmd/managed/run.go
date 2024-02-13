@@ -135,7 +135,7 @@ func (r *Runner) setupTask(encodedJob, taskLabel string) error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/task"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -173,7 +173,7 @@ type listTaskResponse struct {
 }
 
 func (r *Runner) listTask() error {
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/task"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -213,7 +213,7 @@ type runTaskResponse struct {
 }
 
 func (r *Runner) runTask(taskLabel string) error {
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task/" + taskLabel + "/run"
+	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/task/" + taskLabel + "/run"
 
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
