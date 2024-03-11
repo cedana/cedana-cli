@@ -4,7 +4,6 @@ package main
 // because it's not imported anywhere else.
 import (
 	"github.com/cedana/cedana-cli/cmd"
-	_ "github.com/cedana/cedana-cli/cmd/managed"
 )
 
 // these get set by goreleaser

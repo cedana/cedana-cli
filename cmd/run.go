@@ -1,4 +1,4 @@
-package managed
+package cmd
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/cedana/cedana-cli/cmd"
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
@@ -49,11 +48,6 @@ func BuildRunner() *Runner {
 		logger:    &l,
 		providers: make(map[string]cedana.Provider),
 	}
-}
-
-var managedCmd = &cobra.Command{
-	Use:   "managed",
-	Short: "Run your workloads on the Cedana system.",
 }
 
 var setupTaskCmd = &cobra.Command{
@@ -135,7 +129,7 @@ func (r *Runner) setupTask(encodedJob, taskLabel string) error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/task"
+	url := r.cfg.MarketServiceUrl + "/" + "/task"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -143,7 +137,7 @@ func (r *Runner) setupTask(encodedJob, taskLabel string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -173,7 +167,7 @@ type listTaskResponse struct {
 }
 
 func (r *Runner) listTask() error {
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/task"
+	url := r.cfg.MarketServiceUrl + "/" + "/task"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -181,7 +175,7 @@ func (r *Runner) listTask() error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -213,7 +207,7 @@ type runTaskResponse struct {
 }
 
 func (r *Runner) runTask(taskLabel string) error {
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + "/task/" + taskLabel + "/run"
+	url := r.cfg.MarketServiceUrl + "/" + "/task/" + taskLabel + "/run"
 
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -221,7 +215,7 @@ func (r *Runner) runTask(taskLabel string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -247,10 +241,9 @@ func (r *Runner) runTask(taskLabel string) error {
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(managedCmd)
-	managedCmd.AddCommand(setupTaskCmd)
-	managedCmd.AddCommand(listTasksCmd)
-	managedCmd.AddCommand(runTaskCmd)
+	RootCmd.AddCommand(setupTaskCmd)
+	RootCmd.AddCommand(listTasksCmd)
+	RootCmd.AddCommand(runTaskCmd)
 
 	setupTaskCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file")
 }

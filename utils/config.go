@@ -19,17 +19,12 @@ var ValidProviders = []string{
 }
 
 type CedanaConfig struct {
-	CedanaManaged    bool             `json:"cedana_managed" mapstructure:"cedana_managed"`
-	ManagedConfig    ManagedConfig    `json:"managed_config" mapstructure:"managed_config"`
+	MarketServiceUrl string           `json:"market_service_url" mapstructure:"market_service_url"`
+	AuthToken        string           `json:"auth_token" mapstructure:"auth_token"`
 	EnabledProviders []string         `json:"enabled_providers" mapstructure:"enabled_providers"`
 	KeepRunning      bool             `json:"keep_running" mapstructure:"keep_running"`
 	AWSConfig        AWSConfig        `json:"aws" mapstructure:"aws"`
 	PaperspaceConfig PaperspaceConfig `json:"paperspace" mapstructure:"paperspace"`
-}
-
-type ManagedConfig struct {
-	MarketServiceUrl string `json:"market_service_url" mapstructure:"market_service_url"`
-	AuthToken        string `json:"auth_token" mapstructure:"auth_token"`
 }
 
 type AWSConfig struct {
@@ -110,11 +105,9 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 // Used in bootstrap to create a placeholder config
 func CreateCedanaConfig(path, username string) error {
 	sc := &CedanaConfig{
-		ManagedConfig: ManagedConfig{
-			MarketServiceUrl: "https://market.cedana.com",
-			AuthToken:        "",
-		},
-		EnabledProviders: []string{""},
+		MarketServiceUrl: "https://market.cedana.com",
+		AuthToken:        "",
+		EnabledProviders: []string{"aws"},
 		AWSConfig:        AWSConfig{},
 		PaperspaceConfig: PaperspaceConfig{},
 	}
