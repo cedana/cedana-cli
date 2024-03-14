@@ -17,7 +17,7 @@ import (
 	cedana "github.com/cedana/cedana-cli/types"
 )
 
-var jobFile string
+var id string
 
 type Runner struct {
 	ctx       context.Context
@@ -57,11 +57,11 @@ var setupTaskCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
 
-		if jobFile == "" {
+		if id == "" {
 			r.logger.Fatal().Msg("job file not specified")
 		}
 
-		file, err := os.Open(jobFile)
+		file, err := os.Open(args[0])
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not open job file")
 		}
@@ -245,5 +245,5 @@ func init() {
 	RootCmd.AddCommand(listTasksCmd)
 	RootCmd.AddCommand(runTaskCmd)
 
-	setupTaskCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file")
+	setupTaskCmd.Flags().StringVarP(&id, "id", "i", "", "id for task")
 }

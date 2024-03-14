@@ -33,6 +33,10 @@ var bootstrapCmd = &cobra.Command{
 			return fmt.Errorf("no auth token detected, please login first with cedana-cli login")
 		}
 
+		if r.cfg.MarketServiceUrl == "" {
+			return fmt.Errorf("market service URL not set in config")
+		}
+
 		if r.cfg.EnabledProviders == nil || len(r.cfg.EnabledProviders) == 0 {
 			return fmt.Errorf("no providers specified in config, add provider-specific config and enabled providers, regions and try again.")
 		}
@@ -305,7 +309,7 @@ func (r *Runner) setCredentialsAWS() error {
 
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -314,7 +318,9 @@ func (r *Runner) setCredentialsAWS() error {
 		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 
-	r.logger.Info().Msgf("AWS credentials set with response %s", string(body))
+	r.logger.Info().Msgf("aws credentials set")
+
+	r.logger.Info().Msg("setting ssh key")
 
 	return nil
 }
