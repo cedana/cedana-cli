@@ -10,14 +10,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var ValidProviders = []string{
-	"aws",
-	"gcp",
-	"azure",
-	"paperspace",
-	"local",
-}
-
 type CedanaConfig struct {
 	MarketServiceUrl string           `json:"market_service_url" mapstructure:"market_service_url"`
 	AuthToken        string           `json:"auth_token" mapstructure:"auth_token"`
@@ -108,7 +100,12 @@ func CreateCedanaConfig(path, username string) error {
 		MarketServiceUrl: "https://market.cedana.com",
 		AuthToken:        "",
 		EnabledProviders: []string{"aws"},
-		AWSConfig:        AWSConfig{},
+		AWSConfig: AWSConfig{
+			AccessKeyID:             "",
+			SecretAccessKey:         "",
+			EnabledRegions:          []string{"us-east-1"},
+			EnabledInstanceFamilies: []string{"t2"},
+		},
 		PaperspaceConfig: PaperspaceConfig{},
 	}
 

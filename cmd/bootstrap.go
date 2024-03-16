@@ -69,7 +69,6 @@ var bootstrapCmd = &cobra.Command{
 			cInfo = append(cInfo, info)
 		}
 
-		r.logger.Info().Msgf("cinfo = %+v", cInfo)
 		err = r.bootstrap(cInfo, true)
 		if err != nil {
 			return err
@@ -230,14 +229,12 @@ type CloudInfo struct {
 type bootstrapRequest struct {
 	SessionToken string      `json:"-"`
 	CloudInfo    []CloudInfo `json:"cloud_info"`
-	LeaveRunning bool        `json:"leaveRunning"`
 }
 
 func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 	br := bootstrapRequest{
 		SessionToken: r.cfg.AuthToken,
 		CloudInfo:    cloudInfo,
-		LeaveRunning: leaveRunning,
 	}
 
 	jsonBody, err := json.Marshal(br)
@@ -269,6 +266,11 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 
 	r.logger.Info().Msgf("Bootstrap completed")
 	return nil
+}
+
+type setSupportedcloudRequest struct {
+	Name    string   `json:"name"`
+	Regions []string `json:"regions"`
 }
 
 type setCredentialsRequestAWS struct {
