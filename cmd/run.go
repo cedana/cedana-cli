@@ -202,14 +202,24 @@ func (r *Runner) listTask() error {
 	return nil
 }
 
+type runTaskRequest struct {
+	TaskID string `json:"task_id"`
+	Label  string `json:"label"`
+}
+
 type runTaskResponse struct {
 	InstanceID string `json:"cloud_instance_id"`
 }
 
-func (r *Runner) runTask(taskLabel string) error {
-	url := r.cfg.MarketServiceUrl + "/" + "/task/" + taskLabel + "/run"
+func (r *Runner) runTask(task runTaskRequest) error {
+	jsonBody, err := json.Marshal(task)
+	if err != nil {
+		return err
+	}
 
-	req, err := http.NewRequest("POST", url, nil)
+	url := r.cfg.MarketServiceUrl + "/" + "/task/" + "/run"
+
+	req, err := http.NewRequest("GET", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return err
 	}
@@ -225,17 +235,19 @@ func (r *Runner) runTask(taskLabel string) error {
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	for {
+		buf := make([]byte, 4096)
+		n, err := resp.Body.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		if n > 0 {
+			r.logger.Info().Msgf("received status from market: %s", string(buf[:n]))
+		}
 	}
-
-	var rtr runTaskResponse
-	err = json.NewDecoder(resp.Body).Decode(&rtr)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Task started on instance with ID: ", rtr.InstanceID)
 
 	return nil
 }
