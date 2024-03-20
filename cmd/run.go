@@ -9,7 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"sync"
+	"time"
 
 	"github.com/cedana/cedana-cli/utils"
 	"github.com/rs/xid"
@@ -105,29 +105,22 @@ var runTaskCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
 		handlerID := xid.New()
-		err := r.createInstance(CreateInstanceRequest{
-			PollHandlerID: handlerID.String(),
-			TaskID:        args[0],
-		})
-		if err != nil {
-			r.logger.Fatal().Err(err).Msg("could not run task")
-		}
-	},
-}
+		go func() {
+			err := r.createInstance(CreateInstanceRequest{
+				PollHandlerID: handlerID.String(),
+				TaskID:        args[0],
+			})
+			if err != nil {
+				r.logger.Fatal().Err(err).Msg("could not run task")
+			}
+		}()
 
-var pollTaskCmd = &cobra.Command{
-	Use:   "poll",
-	Short: "Poll for task status",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		r := BuildRunner()
-		handlerID := xid.New()
-		err := r.createInstance(CreateInstanceRequest{
-			PollHandlerID: handlerID.String(),
-		})
+		time.Sleep(1 * time.Minute)
+		err := r.pollCreateInstance(handlerID.String())
 		if err != nil {
-			r.logger.Fatal().Err(err).Msg("could not run task")
+			r.logger.Fatal().Err(err).Msg("error polling")
 		}
+
 	},
 }
 
@@ -281,36 +274,38 @@ type pollCreateInstanceRequest struct {
 	PollHandlerID string `json:"poll_handler_id"`
 }
 
-func (r *Runner) pollCreateInstance(pollReq pollCreateInstanceRequest) (string, error) {
-	jsonBody, err := json.Marshal(pollReq)
-	if err != nil {
-		return "", err
-	}
+func (r *Runner) pollCreateInstance(pollReq string) error {
 
-	url := r.cfg.MarketServiceUrl + "/instance" + "/events"
+	url := r.cfg.MarketServiceUrl + "/instance/" + pollReq + "/events"
 
-	req, err := http.NewRequest("GET", url, bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			resp, err := client.Do(req)
+			if err != nil {
+				r.logger.Warn().Err(err).Msg("could not poll for events")
+				continue
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				r.logger.Warn().Err(err).Msg("could not read response body")
+				continue
+			}
+			resp.Body.Close()
+			r.logger.Info().Msgf("Received event: %s", string(body))
+			continue
+		}
 	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(body), nil
 }
 
 func init() {
