@@ -9,8 +9,10 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/cedana/cedana-cli/utils"
+	"github.com/rs/xid"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
@@ -95,14 +97,34 @@ var listTasksCmd = &cobra.Command{
 	},
 }
 
+// TODO NR - take a label as input instead
 var runTaskCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a previously setup task",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
+		handlerID := xid.New()
+		err := r.createInstance(CreateInstanceRequest{
+			PollHandlerID: handlerID.String(),
+			TaskID:        args[0],
+		})
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not run task")
+		}
+	},
+}
 
-		err := r.runTask(args[0])
+var pollTaskCmd = &cobra.Command{
+	Use:   "poll",
+	Short: "Poll for task status",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		r := BuildRunner()
+		handlerID := xid.New()
+		err := r.createInstance(CreateInstanceRequest{
+			PollHandlerID: handlerID.String(),
+		})
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not run task")
 		}
@@ -129,7 +151,7 @@ func (r *Runner) setupTask(encodedJob, taskLabel string) error {
 		return err
 	}
 
-	url := r.cfg.MarketServiceUrl + "/" + "/task"
+	url := r.cfg.MarketServiceUrl + "/task"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -167,7 +189,8 @@ type listTaskResponse struct {
 }
 
 func (r *Runner) listTask() error {
-	url := r.cfg.MarketServiceUrl + "/" + "/task"
+	url := r.cfg.MarketServiceUrl + "/task"
+	fmt.Println(url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -202,24 +225,27 @@ func (r *Runner) listTask() error {
 	return nil
 }
 
-type runTaskRequest struct {
-	TaskID string `json:"task_id"`
-	Label  string `json:"label"`
+type CreateInstanceRequest struct {
+	PollHandlerID string `json:"poll_handler_id"`
+	TaskID        string `json:"task_id"`
+	Label         string `json:"label"`
 }
 
-type runTaskResponse struct {
-	InstanceID string `json:"cloud_instance_id"`
+type CreateInstanceResponse struct {
+	PollHandlerID string `json:"poll_handler_id"`
+	InstanceID    string `json:"instance_id"`
 }
 
-func (r *Runner) runTask(task runTaskRequest) error {
-	jsonBody, err := json.Marshal(task)
+func (r *Runner) createInstance(instanceReq CreateInstanceRequest) error {
+	r.logger.Info().Msgf("Creating instance for task: %s", instanceReq.TaskID)
+	jsonBody, err := json.Marshal(instanceReq)
 	if err != nil {
 		return err
 	}
 
-	url := r.cfg.MarketServiceUrl + "/" + "/task/" + "/run"
+	url := r.cfg.MarketServiceUrl + "/instance" + "/create"
 
-	req, err := http.NewRequest("GET", url, bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return err
 	}
@@ -235,21 +261,56 @@ func (r *Runner) runTask(task runTaskRequest) error {
 
 	defer resp.Body.Close()
 
-	for {
-		buf := make([]byte, 4096)
-		n, err := resp.Body.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		if n > 0 {
-			r.logger.Info().Msgf("received status from market: %s", string(buf[:n]))
-		}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 
+	var str CreateInstanceResponse
+	err = json.NewDecoder(resp.Body).Decode(&str)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Instance created with ID: %s", str.InstanceID)
+	fmt.Printf("Tail setup logs with command: cedana-cli poll setup %s", str.PollHandlerID)
+
 	return nil
+}
+
+type pollCreateInstanceRequest struct {
+	PollHandlerID string `json:"poll_handler_id"`
+}
+
+func (r *Runner) pollCreateInstance(pollReq pollCreateInstanceRequest) (string, error) {
+	jsonBody, err := json.Marshal(pollReq)
+	if err != nil {
+		return "", err
+	}
+
+	url := r.cfg.MarketServiceUrl + "/instance" + "/events"
+
+	req, err := http.NewRequest("GET", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
 
 func init() {
