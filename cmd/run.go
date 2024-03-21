@@ -1,4 +1,4 @@
-package managed
+package cmd
 
 import (
 	"bytes"
@@ -8,17 +8,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"os/signal"
+	"strings"
+	"time"
 
-	"github.com/cedana/cedana-cli/cmd"
 	"github.com/cedana/cedana-cli/utils"
+	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	cedana "github.com/cedana/cedana-cli/types"
 )
 
-var jobFile string
+var id string
 
 type Runner struct {
 	ctx       context.Context
@@ -51,11 +55,6 @@ func BuildRunner() *Runner {
 	}
 }
 
-var managedCmd = &cobra.Command{
-	Use:   "managed",
-	Short: "Run your workloads on the Cedana system.",
-}
-
 var setupTaskCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Setup a task to run on Cedana",
@@ -63,11 +62,11 @@ var setupTaskCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
 
-		if jobFile == "" {
+		if id == "" {
 			r.logger.Fatal().Msg("job file not specified")
 		}
 
-		file, err := os.Open(jobFile)
+		file, err := os.Open(args[0])
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not open job file")
 		}
@@ -101,16 +100,30 @@ var listTasksCmd = &cobra.Command{
 	},
 }
 
-var runTaskCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run a previously setup task",
+var createInstanceCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create an instance for a task [task_id]",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
-
-		err := r.runTask(args[0])
+		err := r.createInstance(CreateInstanceRequest{
+			TaskID: args[0],
+		})
 		if err != nil {
-			r.logger.Fatal().Err(err).Msg("could not run task")
+			r.logger.Fatal().Err(err).Msg("could not create instance")
+		}
+	},
+}
+
+var setupInstanceCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Setup an instance [instance_id]",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		r := BuildRunner()
+		err := r.setupInstance(args[0])
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not setup instance")
 		}
 	},
 }
@@ -135,7 +148,7 @@ func (r *Runner) setupTask(encodedJob, taskLabel string) error {
 		return err
 	}
 
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task"
+	url := r.cfg.MarketServiceUrl + "/task"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -143,7 +156,7 @@ func (r *Runner) setupTask(encodedJob, taskLabel string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -173,7 +186,8 @@ type listTaskResponse struct {
 }
 
 func (r *Runner) listTask() error {
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task"
+	url := r.cfg.MarketServiceUrl + "/task"
+	fmt.Println(url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -181,7 +195,7 @@ func (r *Runner) listTask() error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -208,20 +222,31 @@ func (r *Runner) listTask() error {
 	return nil
 }
 
-type runTaskResponse struct {
-	InstanceID string `json:"cloud_instance_id"`
+type CreateInstanceRequest struct {
+	TaskID string `json:"task_id"`
+	Label  string `json:"label"`
 }
 
-func (r *Runner) runTask(taskLabel string) error {
-	url := r.cfg.ManagedConfig.MarketServiceUrl + "/" + r.cfg.ManagedConfig.UserID + "/task/" + taskLabel + "/run"
+type CreateInstanceResponse struct {
+	InstanceID string `json:"instance_id"`
+}
 
-	req, err := http.NewRequest("POST", url, nil)
+func (r *Runner) createInstance(instanceReq CreateInstanceRequest) error {
+	r.logger.Info().Msgf("Creating instance for task: %s", instanceReq.TaskID)
+	jsonBody, err := json.Marshal(instanceReq)
+	if err != nil {
+		return err
+	}
+
+	url := r.cfg.MarketServiceUrl + "/instance" + "/create"
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+r.cfg.ManagedConfig.AuthToken)
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -235,22 +260,77 @@ func (r *Runner) runTask(taskLabel string) error {
 		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 
-	var rtr runTaskResponse
-	err = json.NewDecoder(resp.Body).Decode(&rtr)
+	var str CreateInstanceResponse
+	err = json.NewDecoder(resp.Body).Decode(&str)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Task started on instance with ID: ", rtr.InstanceID)
+	r.logger.Info().Msgf("instance created with ID: %s", str.InstanceID)
 
 	return nil
 }
 
-func init() {
-	cmd.RootCmd.AddCommand(managedCmd)
-	managedCmd.AddCommand(setupTaskCmd)
-	managedCmd.AddCommand(listTasksCmd)
-	managedCmd.AddCommand(runTaskCmd)
+func (r *Runner) setupInstance(instanceID string) error {
+	// Interrupt handler to gracefully close the WebSocket connection.
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
 
-	setupTaskCmd.Flags().StringVarP(&jobFile, "job", "j", "", "job file")
+	host := strings.Split(r.cfg.MarketServiceUrl, "://")[1]
+
+	u := url.URL{Scheme: "wss", Host: host, Path: "/instance/setup/" + instanceID + "/ws"}
+	r.logger.Info().Msgf("Connecting to %s", u.String())
+
+	reqHeader := http.Header{}
+	reqHeader.Add("Authorization", "Bearer "+r.cfg.AuthToken)
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), reqHeader)
+	if err != nil {
+		return err
+	}
+
+	defer c.Close()
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		for {
+			_, message, err := c.ReadMessage()
+			if err != nil {
+				r.logger.Error().Err(err).Msg("read:")
+				return
+			}
+			r.logger.Info().Msgf("recv: %s", message)
+		}
+	}()
+
+	for {
+		select {
+		case <-done:
+			return nil
+		case <-interrupt:
+			r.logger.Info().Msg("interrupt")
+			err := c.WriteMessage(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			if err != nil {
+				r.logger.Error().Err(err).Msg("write close:")
+				return err
+			}
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+			}
+			return nil
+		}
+	}
+}
+
+func init() {
+	RootCmd.AddCommand(setupTaskCmd)
+	RootCmd.AddCommand(listTasksCmd)
+	RootCmd.AddCommand(createInstanceCmd)
+	RootCmd.AddCommand(setupInstanceCmd)
+
+	setupTaskCmd.Flags().StringVarP(&id, "id", "i", "", "id for task")
 }

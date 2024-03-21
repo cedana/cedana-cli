@@ -8,32 +8,15 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/viper"
-	"k8s.io/utils/strings/slices"
 )
 
-var ValidProviders = []string{
-	"aws",
-	"gcp",
-	"azure",
-	"paperspace",
-	"local",
-}
-
 type CedanaConfig struct {
-	CedanaManaged    bool             `json:"cedana_managed" mapstructure:"cedana_managed"`
-	ManagedConfig    ManagedConfig    `json:"managed_config" mapstructure:"managed_config"`
+	MarketServiceUrl string           `json:"market_service_url" mapstructure:"market_service_url"`
+	AuthToken        string           `json:"auth_token" mapstructure:"auth_token"`
 	EnabledProviders []string         `json:"enabled_providers" mapstructure:"enabled_providers"`
 	KeepRunning      bool             `json:"keep_running" mapstructure:"keep_running"`
 	AWSConfig        AWSConfig        `json:"aws" mapstructure:"aws"`
 	PaperspaceConfig PaperspaceConfig `json:"paperspace" mapstructure:"paperspace"`
-}
-
-type ManagedConfig struct {
-	MarketServiceUrl string `json:"market_service_url" mapstructure:"market_service_url"`
-	Username         string `json:"username" mapstructure:"username"`
-	UserID           string `json:"user_id" mapstructure:"user_id"`
-	Password         string `json:"password" mapstructure:"password"`
-	AuthToken        string `json:"auth_token" mapstructure:"auth_token"`
 }
 
 type AWSConfig struct {
@@ -108,36 +91,21 @@ func InitCedanaConfig() (*CedanaConfig, error) {
 		return nil, err
 	}
 
-	if err := isEnabledProvidersValid(config); err != nil {
-		return nil, err
-	}
-
 	return &config, nil
-}
-
-func isEnabledProvidersValid(config CedanaConfig) error {
-	var invalid int = 0
-	for _, enabled := range config.EnabledProviders {
-		if !slices.Contains(ValidProviders, enabled) {
-			invalid++
-		}
-	}
-	if invalid > 0 {
-		return fmt.Errorf("invalid providers: %v", invalid)
-	}
-	return nil
 }
 
 // Used in bootstrap to create a placeholder config
 func CreateCedanaConfig(path, username string) error {
 	sc := &CedanaConfig{
-		ManagedConfig: ManagedConfig{
-			MarketServiceUrl: "https://market.cedana.com",
-			Username:         "",
-			AuthToken:        "",
+		MarketServiceUrl: "https://market.cedana.com",
+		AuthToken:        "",
+		EnabledProviders: []string{"aws"},
+		AWSConfig: AWSConfig{
+			AccessKeyID:             "",
+			SecretAccessKey:         "",
+			EnabledRegions:          []string{"us-east-1"},
+			EnabledInstanceFamilies: []string{"t2"},
 		},
-		EnabledProviders: []string{""},
-		AWSConfig:        AWSConfig{},
 		PaperspaceConfig: PaperspaceConfig{},
 	}
 
