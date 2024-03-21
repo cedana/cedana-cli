@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/cedana/cedana-cli/utils"
@@ -115,7 +116,7 @@ var createInstanceCmd = &cobra.Command{
 }
 
 var setupInstanceCmd = &cobra.Command{
-	Use:   "setup",
+	Use:   "start",
 	Short: "Setup an instance [instance_id]",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -265,7 +266,7 @@ func (r *Runner) createInstance(instanceReq CreateInstanceRequest) error {
 		return err
 	}
 
-	fmt.Printf("Instance created with ID: %s", str.InstanceID)
+	r.logger.Info().Msgf("instance created with ID: %s", str.InstanceID)
 
 	return nil
 }
@@ -275,10 +276,15 @@ func (r *Runner) setupInstance(instanceID string) error {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: r.cfg.MarketServiceUrl, Path: "/instance/setup/" + instanceID + "/ws"}
+	host := strings.Split(r.cfg.MarketServiceUrl, "://")[1]
+
+	u := url.URL{Scheme: "wss", Host: host, Path: "/instance/setup/" + instanceID + "/ws"}
 	r.logger.Info().Msgf("Connecting to %s", u.String())
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	reqHeader := http.Header{}
+	reqHeader.Add("Authorization", "Bearer "+r.cfg.AuthToken)
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), reqHeader)
 	if err != nil {
 		return err
 	}
