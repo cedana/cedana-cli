@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"os/signal"
 	"time"
 
 	"github.com/cedana/cedana-cli/utils"
-	"github.com/rs/xid"
+	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
@@ -97,30 +99,31 @@ var listTasksCmd = &cobra.Command{
 	},
 }
 
-// TODO NR - take a label as input instead
-var runTaskCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run a previously setup task",
+var createInstanceCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create an instance for a task [task_id]",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
-		handlerID := xid.New()
-		go func() {
-			err := r.createInstance(CreateInstanceRequest{
-				PollHandlerID: handlerID.String(),
-				TaskID:        args[0],
-			})
-			if err != nil {
-				r.logger.Fatal().Err(err).Msg("could not run task")
-			}
-		}()
-
-		time.Sleep(1 * time.Minute)
-		err := r.pollCreateInstance(handlerID.String())
+		err := r.createInstance(CreateInstanceRequest{
+			TaskID: args[0],
+		})
 		if err != nil {
-			r.logger.Fatal().Err(err).Msg("error polling")
+			r.logger.Fatal().Err(err).Msg("could not create instance")
 		}
+	},
+}
 
+var setupInstanceCmd = &cobra.Command{
+	Use:   "setup",
+	Short: "Setup an instance [instance_id]",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		r := BuildRunner()
+		err := r.setupInstance(args[0])
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not setup instance")
+		}
 	},
 }
 
@@ -219,14 +222,12 @@ func (r *Runner) listTask() error {
 }
 
 type CreateInstanceRequest struct {
-	PollHandlerID string `json:"poll_handler_id"`
-	TaskID        string `json:"task_id"`
-	Label         string `json:"label"`
+	TaskID string `json:"task_id"`
+	Label  string `json:"label"`
 }
 
 type CreateInstanceResponse struct {
-	PollHandlerID string `json:"poll_handler_id"`
-	InstanceID    string `json:"instance_id"`
+	InstanceID string `json:"instance_id"`
 }
 
 func (r *Runner) createInstance(instanceReq CreateInstanceRequest) error {
@@ -265,45 +266,56 @@ func (r *Runner) createInstance(instanceReq CreateInstanceRequest) error {
 	}
 
 	fmt.Printf("Instance created with ID: %s", str.InstanceID)
-	fmt.Printf("Tail setup logs with command: cedana-cli poll setup %s", str.PollHandlerID)
 
 	return nil
 }
 
-type pollCreateInstanceRequest struct {
-	PollHandlerID string `json:"poll_handler_id"`
-}
+func (r *Runner) setupInstance(instanceID string) error {
+	// Interrupt handler to gracefully close the WebSocket connection.
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
 
-func (r *Runner) pollCreateInstance(pollReq string) error {
+	u := url.URL{Scheme: "ws", Host: r.cfg.MarketServiceUrl, Path: "/instance/setup/" + instanceID + "/ws"}
+	r.logger.Info().Msgf("Connecting to %s", u.String())
 
-	url := r.cfg.MarketServiceUrl + "/instance/" + pollReq + "/events"
-
-	req, err := http.NewRequest("GET", url, nil)
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
+	defer c.Close()
+	done := make(chan struct{})
 
-	client := &http.Client{}
-	ticker := time.NewTicker(5 * time.Second)
+	go func() {
+		defer close(done)
+		for {
+			_, message, err := c.ReadMessage()
+			if err != nil {
+				r.logger.Error().Err(err).Msg("read:")
+				return
+			}
+			r.logger.Info().Msgf("recv: %s", message)
+		}
+	}()
+
 	for {
 		select {
-		case <-ticker.C:
-			resp, err := client.Do(req)
+		case <-done:
+			return nil
+		case <-interrupt:
+			r.logger.Info().Msg("interrupt")
+			err := c.WriteMessage(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
-				r.logger.Warn().Err(err).Msg("could not poll for events")
-				continue
+				r.logger.Error().Err(err).Msg("write close:")
+				return err
 			}
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				r.logger.Warn().Err(err).Msg("could not read response body")
-				continue
+			select {
+			case <-done:
+			case <-time.After(time.Second):
 			}
-			resp.Body.Close()
-			r.logger.Info().Msgf("Received event: %s", string(body))
-			continue
+			return nil
 		}
 	}
 }
@@ -311,7 +323,8 @@ func (r *Runner) pollCreateInstance(pollReq string) error {
 func init() {
 	RootCmd.AddCommand(setupTaskCmd)
 	RootCmd.AddCommand(listTasksCmd)
-	RootCmd.AddCommand(runTaskCmd)
+	RootCmd.AddCommand(createInstanceCmd)
+	RootCmd.AddCommand(setupInstanceCmd)
 
 	setupTaskCmd.Flags().StringVarP(&id, "id", "i", "", "id for task")
 }
