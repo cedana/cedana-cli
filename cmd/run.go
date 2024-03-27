@@ -106,7 +106,7 @@ var createInstanceCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
-		err := r.createInstance(CreateInstanceRequest{
+		err := r.createInstance(cmd.Context(), CreateInstanceRequest{
 			TaskID: args[0],
 		})
 		if err != nil {
@@ -121,9 +121,22 @@ var setupInstanceCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
-		err := r.setupInstance(args[0])
+		err := r.setupInstance(cmd.Context(), args[0])
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not setup instance")
+		}
+	},
+}
+
+var listInstancesCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all instances associated w/ owner",
+	Args:  cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
+		r := BuildRunner()
+		err := r.listInstances()
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("could not list instances")
 		}
 	},
 }
@@ -231,7 +244,7 @@ type CreateInstanceResponse struct {
 	InstanceID string `json:"instance_id"`
 }
 
-func (r *Runner) createInstance(instanceReq CreateInstanceRequest) error {
+func (r *Runner) createInstance(ctx context.Context, instanceReq CreateInstanceRequest) error {
 	r.logger.Info().Msgf("Creating instance for task: %s", instanceReq.TaskID)
 	jsonBody, err := json.Marshal(instanceReq)
 	if err != nil {
@@ -271,7 +284,7 @@ func (r *Runner) createInstance(instanceReq CreateInstanceRequest) error {
 	return nil
 }
 
-func (r *Runner) setupInstance(instanceID string) error {
+func (r *Runner) setupInstance(ctx context.Context, instanceID string) error {
 	// Interrupt handler to gracefully close the WebSocket connection.
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -324,6 +337,48 @@ func (r *Runner) setupInstance(instanceID string) error {
 			return nil
 		}
 	}
+}
+
+type ListInstancesResponse struct {
+	InstanceID string `json:"instance_id"`
+	ProviderID string `json:"provider_id"`
+	StartTime  string `json:"start_time"`
+	EndTime    string `json:"end_time"`
+	Price      string `json:"price"`
+	Region     string `json:"region"`
+	Provider   string `json:"provider"`
+}
+
+func (r *Runner) listInstances(ctx context.Context) error {
+	url := r.cfg.MarketServiceUrl + "/instance"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
+	var str ListInstancesResponse
+	err = json.NewDecoder(resp.Body).Decode(&str)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func init() {
