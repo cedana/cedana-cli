@@ -48,6 +48,7 @@ var bootstrapCmd = &cobra.Command{
 			switch provider {
 			case "aws":
 				info.Name = "aws"
+				r.logger.Info().Msgf("setting up AWS...")
 				if r.cfg.AWSConfig.EnabledRegions == nil || len(r.cfg.AWSConfig.EnabledRegions) == 0 {
 					return fmt.Errorf("no regions specified in config, add regions and try again.")
 				}
@@ -77,7 +78,7 @@ var bootstrapCmd = &cobra.Command{
 		for _, info := range cInfo {
 			switch info.Name {
 			case "aws":
-				r.logger.Info().Msgf("setting credentials for AWS")
+				r.logger.Info().Msgf("setting credentials for AWS...")
 				err = r.setCredentialsAWS()
 				if err != nil {
 					return err
@@ -293,7 +294,7 @@ func (r *Runner) setCredentialsAWS() error {
 		return err
 	}
 
-	url := r.cfg.MarketServiceUrl + "/" + "/cloud/" + "aws" + "/credentials"
+	url := r.cfg.MarketServiceUrl + "/cloud/" + "aws" + "/credentials"
 
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -320,11 +321,13 @@ func (r *Runner) setCredentialsAWS() error {
 		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 
-	r.logger.Info().Msgf("aws credentials set")
-
-	r.logger.Info().Msg("setting ssh key")
+	r.logger.Info().Msgf("aws credentials set, ssh key created!")
 
 	return nil
+}
+
+func (r *Runner) getCredentials(cloud string) {
+
 }
 
 func init() {

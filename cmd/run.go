@@ -18,11 +18,10 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	cedana "github.com/cedana/cedana-cli/types"
 )
-
-var id string
 
 type Runner struct {
 	ctx       context.Context
@@ -37,6 +36,22 @@ type Task struct {
 	Label  string `json:"label"`
 	Status string `json:"status"`
 	Config string `json:"config"`
+}
+
+type JobFile struct {
+	WorkDirPath       string            `mapstructure:"work_dir_path"` // path to a bucket you want mounted
+	UserInstanceSpecs UserInstanceSpecs `mapstructure:"instance_specs"`
+	SetupCommands     []string          `mapstructure:"setup"`
+	Task              string            `mapstructure:"task"` // task to run on instance
+}
+
+type UserInstanceSpecs struct {
+	InstanceType string  `mapstructure:"instance_type"`
+	Memory       int     `mapstructure:"memory_gb"`
+	VCPUs        int     `mapstructure:"cpu_cores"`
+	VRAM         int     `mapstructure:"vram_gb"`
+	GPU          string  `mapstructure:"gpu"`
+	MaxPrice     float64 `mapstructure:"max_price_usd_hour"`
 }
 
 func BuildRunner() *Runner {
@@ -55,34 +70,50 @@ func BuildRunner() *Runner {
 	}
 }
 
-var setupTaskCmd = &cobra.Command{
-	Use:   "setup",
-	Short: "Setup a task to run on Cedana",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		r := BuildRunner()
+var taskCmd = &cobra.Command{
+	Use:   "task",
+	Short: "create, manage and destroy tasks on Cedana",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fmt.Errorf("must run with subcommand/s")
+	},
+}
 
-		if id == "" {
-			r.logger.Fatal().Msg("job file not specified")
-		}
+var createTaskCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Setup a task [jobfile] with [label] to run on Cedana",
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := BuildRunner()
 
 		file, err := os.Open(args[0])
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not open job file")
+			return err
 		}
 		defer file.Close()
 
 		contents, err := io.ReadAll(file)
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not read job file")
+			return err
 		}
 
+		// attempt to marshal, if it fails exit
+		var job JobFile
+		err = yaml.Unmarshal(contents, &job)
+		if err != nil {
+			r.logger.Fatal().Err(err).Msg("contents of job file are not valid yaml")
+		}
+
+		// encode and send as string
 		encodedJob := base64.StdEncoding.EncodeToString(contents)
 
-		err = r.setupTask(encodedJob, args[0])
+		err = r.createTask(encodedJob, args[1])
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not setup task")
 		}
+
+		return err
 	},
 }
 
@@ -97,6 +128,14 @@ var listTasksCmd = &cobra.Command{
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not list tasks")
 		}
+	},
+}
+
+var instanceCmd = &cobra.Command{
+	Use:   "instance",
+	Short: "create, manage and destroy instances on Cedana",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return fmt.Errorf("must be run with subcommand/s")
 	},
 }
 
@@ -115,43 +154,30 @@ var createInstanceCmd = &cobra.Command{
 	},
 }
 
-var setupInstanceCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Setup an instance [instance_id]",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		r := BuildRunner()
-		err := r.setupInstance(cmd.Context(), args[0])
-		if err != nil {
-			r.logger.Fatal().Err(err).Msg("could not setup instance")
-		}
-	},
-}
-
 var listInstancesCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all instances associated w/ owner",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		r := BuildRunner()
-		err := r.listInstances()
+		err := r.listInstances(cmd.Context())
 		if err != nil {
 			r.logger.Fatal().Err(err).Msg("could not list instances")
 		}
 	},
 }
 
-type setupTaskRequest struct {
+type createTaskRequest struct {
 	TaskConfig string `json:"task_config"`
 	TaskLabel  string `json:"label"`
 }
 
-type setupTaskResponse struct {
+type createTaskResponse struct {
 	TaskID string `json:"task_id"`
 }
 
-func (r *Runner) setupTask(encodedJob, taskLabel string) error {
-	st := setupTaskRequest{
+func (r *Runner) createTask(encodedJob, taskLabel string) error {
+	st := createTaskRequest{
 		TaskConfig: encodedJob,
 		TaskLabel:  taskLabel,
 	}
@@ -183,13 +209,13 @@ func (r *Runner) setupTask(encodedJob, taskLabel string) error {
 		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 
-	var str setupTaskResponse
+	var str createTaskResponse
 	err = json.NewDecoder(resp.Body).Decode(&str)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Task created with ID: %s", str.TaskID)
+	r.logger.Info().Msgf("Task created with ID: %s", str.TaskID)
 
 	return nil
 }
@@ -244,6 +270,7 @@ type CreateInstanceResponse struct {
 	InstanceID string `json:"instance_id"`
 }
 
+// creates and sets up an instance
 func (r *Runner) createInstance(ctx context.Context, instanceReq CreateInstanceRequest) error {
 	r.logger.Info().Msgf("Creating instance for task: %s", instanceReq.TaskID)
 	jsonBody, err := json.Marshal(instanceReq)
@@ -279,7 +306,14 @@ func (r *Runner) createInstance(ctx context.Context, instanceReq CreateInstanceR
 		return err
 	}
 
-	r.logger.Info().Msgf("instance created with ID: %s", str.InstanceID)
+	r.logger.Info().Msgf("instance created with ID: %s, starting setup...", str.InstanceID)
+
+	time.Sleep(1 * time.Minute)
+	// set up
+	err = r.setupInstance(ctx, str.InstanceID)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -382,10 +416,10 @@ func (r *Runner) listInstances(ctx context.Context) error {
 }
 
 func init() {
-	RootCmd.AddCommand(setupTaskCmd)
-	RootCmd.AddCommand(listTasksCmd)
-	RootCmd.AddCommand(createInstanceCmd)
-	RootCmd.AddCommand(setupInstanceCmd)
+	RootCmd.AddCommand(taskCmd)
+	RootCmd.AddCommand(instanceCmd)
 
-	setupTaskCmd.Flags().StringVarP(&id, "id", "i", "", "id for task")
+	// ideal flow/path
+	taskCmd.AddCommand(createTaskCmd)
+	instanceCmd.AddCommand(createInstanceCmd)
 }
