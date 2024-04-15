@@ -132,6 +132,23 @@ var loginCmd = &cobra.Command{
 	},
 }
 
+var importSSHKeyCmd = &cobra.Command{
+	Use:   "import_key",
+	Short: "Import an SSH key for a [cloud] provider to use with [name] and [key path]",
+	Long:  "Optionally import an SSH key instead of using one created during the bootstrap process. Note, must it in a launch template or whatever the equivalent is in your provdier",
+	Args:  cobra.ExactArgs(3),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		r := BuildRunner()
+
+		err := r.importSSHKey(args[0], args[1], args[2])
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 func validateAuthToken() error {
 	return nil
 }
@@ -243,7 +260,7 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 		return err
 	}
 
-	url := r.cfg.MarketServiceUrl + "/" + "/bootstrap"
+	url := r.cfg.MarketServiceUrl + "/bootstrap"
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -261,8 +278,13 @@ func (r *Runner) bootstrap(cloudInfo []CloudInfo, leaveRunning bool) error {
 
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("request failed with status code: %d and error: %s", resp.StatusCode, err.Error())
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d and error: %s", resp.StatusCode, string(body))
 	}
 
 	r.logger.Info().Msgf("Bootstrap completed")
@@ -312,13 +334,13 @@ func (r *Runner) setCredentialsAWS() error {
 
 	defer resp.Body.Close()
 
-	_, err = io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+		return fmt.Errorf("request failed with status code: %d and error: %s", resp.StatusCode, string(body))
 	}
 
 	r.logger.Info().Msgf("aws credentials set, ssh key created!")
@@ -330,9 +352,70 @@ func (r *Runner) getCredentials(cloud string) {
 
 }
 
+type importSSHKeyRequest struct {
+	Cloud         string `json:"cloud"`
+	Name          string `json:"name"`
+	RawPrivateKey string `json:"private_key"`
+}
+
+func (r *Runner) importSSHKey(cloud, name, privateKeyPath string) error {
+	_, err := os.Stat(privateKeyPath)
+	if err != nil {
+		return err
+	}
+
+	rawPrivateKey, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		return err
+	}
+
+	iskr := importSSHKeyRequest{
+		Cloud:         cloud,
+		Name:          name,
+		RawPrivateKey: string(rawPrivateKey),
+	}
+
+	jsonBody, err := json.Marshal(iskr)
+	if err != nil {
+		return err
+	}
+
+	url := r.cfg.MarketServiceUrl + "/ssh_key"
+
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+r.cfg.AuthToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("request failed with status code: %d and error: %s", resp.StatusCode, string(body))
+	}
+
+	r.logger.Info().Msgf("ssh key imported")
+
+	return nil
+}
+
 func init() {
 	RootCmd.AddCommand(bootstrapCmd)
 	RootCmd.AddCommand(loginCmd)
+	RootCmd.AddCommand(importSSHKeyCmd)
 	loginCmd.Flags().StringVarP(&username, "username", "u", "", "username")
 	loginCmd.Flags().StringVarP(&password, "password", "p", "", "password")
 }

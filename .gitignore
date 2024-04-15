@@ -4,3 +4,4 @@ dist/
 *.vhs
 caltech-*
 .gitconfig
+test/*.json

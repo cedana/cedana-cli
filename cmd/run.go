@@ -226,7 +226,6 @@ type listTaskResponse struct {
 
 func (r *Runner) listTask() error {
 	url := r.cfg.MarketServiceUrl + "/task"
-	fmt.Println(url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -422,4 +421,7 @@ func init() {
 	// ideal flow/path
 	taskCmd.AddCommand(createTaskCmd)
 	instanceCmd.AddCommand(createInstanceCmd)
+
+	// helper funcs
+	taskCmd.AddCommand(listTasksCmd)
 }
