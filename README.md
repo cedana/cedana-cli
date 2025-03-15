@@ -19,6 +19,12 @@ To build from source:
 To run:
 `./cedana-cli`
 
+To login:
+```
+export CEDANA_URL="https://sandbox.cedana.ai/v1"
+export CEDANA_AUTH_TOKEN=<Your auth token from https://auth.cedana.com>
+```
+
 If you prefer to install from a package manager, we push to packagecloud and have a homebrew tap. Check out the [documentation](https://docs.cedana.ai/setup/cedana-cli/quickstart/) for instructions.
 
 ## Documentation
