@@ -4,8 +4,8 @@
 
 This repo contains a CLI tool to allow developers to experiment with our system. With it, you can:
 
-- Launch instances anywhere, with guaranteed price and capacity optimization. We look across your configured providers (AWS, Paperspace, etc.) to select the optimal instance defined in a provided job spec. This abstracts away cloud infra burdens.
-- Deploy and manage any kind of job, whether a pyTorch training job, a webservice or a multibody physics simulation.
+- Launch instances anywhere, with guaranteed price and capacity optimization. We look across your configured providers (AWS, Paperspace, etc.) to select the optimal instance defined in a provided job spec. This abstracts away cloud infra burdens. (On older versions only)
+- Deploy and manage any kind of job, whether a pyTorch training job, a webservice or a multibody physics simulation on kubernetes.
 
 Our managed system layers many more capabilities on top of this, such as: lifecycle management, policy systems, auto migration (through our novel checkpointing system (see [here](https://github.com/cedana/cedana))) and much more.
 
@@ -19,11 +19,16 @@ To build from source:
 To run:
 `./cedana-cli`
 
-If you prefer to install from a package manager, we push to packagecloud and have a homebrew tap. Check out the [documentation](https://docs.cedana.ai/setup/cedana-cli/quickstart/) for instructions.
+To login:
+```
+export CEDANA_URL="https://sandbox.cedana.ai/v1"
+export CEDANA_AUTH_TOKEN=<Your auth token from https://auth.cedana.com>
+```
+
 
 ## Documentation
 
-You can view the official documentation [here](https://docs.cedana.ai).
+We are still working on the documentation.
 
 ## Deprecation Notice
 

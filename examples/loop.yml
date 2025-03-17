@@ -1,8 +1,0 @@
-instance_specs:
-  max_price_usd_hour: 0.2 
-
-work_dir: "work_dir"
-
-task:
-  run:
-   "cd work_dir && ./simple_loop.sh"
