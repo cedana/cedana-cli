@@ -13,42 +13,7 @@ import (
 )
 
 // workloadCmd represents the workload command
-var workloadCmd = &cobra.Command{
-	Use:   "workload",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		var payload interface{}
-		payloadPath, err := cmd.Flags().GetString("payload")
-		if err != nil {
-			fmt.Printf("Error retrieving payload flag: %v\n", err)
-			return
-		}
-
-		payloadData, err := os.ReadFile(payloadPath)
-		if err != nil {
-			fmt.Printf("Error reading payload file %s: %v\n", payloadPath, err)
-			return
-		}
-		if err := json.Unmarshal(payloadData, &payload); err != nil {
-			fmt.Printf("Error parsing JSON payload: %v\n", err)
-			return
-		}
-		resp, err := client.CreateWorkload(payload, cedanaURL, cedanaAuthToken)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			return
-		}
-		fmt.Println(resp)
-	},
-}
-
-var createWorkloadCmd = &cobra.Command{
+var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
@@ -83,8 +48,8 @@ to quickly create a Cobra application.`,
 	},
 }
 
-var deleteWorkloadCmd = &cobra.Command{
-	Use:   "delete",
+var createWorkloadCmd = &cobra.Command{
+	Use:   "workload",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -109,7 +74,7 @@ to quickly create a Cobra application.`,
 			fmt.Printf("Error parsing JSON payload: %v\n", err)
 			return
 		}
-		resp, err := client.DeleteWorkload(payload, cedanaURL, cedanaAuthToken)
+		resp, err := client.CreateWorkload(payload, cedanaURL, cedanaAuthToken)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
@@ -119,15 +84,14 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(workloadCmd)
-	workloadCmd.AddCommand(createWorkloadCmd)
-	workloadCmd.AddCommand(deleteWorkloadCmd)
+	rootCmd.AddCommand(createCmd)
+	createCmd.AddCommand(createWorkloadCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	workloadCmd.PersistentFlags().String("payload", "", "workload payload path")
+	createWorkloadCmd.PersistentFlags().String("payload", "", "workload payload path")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
