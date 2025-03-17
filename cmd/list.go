@@ -12,13 +12,8 @@ import (
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "List all existing components of a resource",
+	Long:  `List all existing instances of resource. A resource can be a pod, node or a cluster (Lists cluster by default)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		clusters, err := client.ListClusters(cedanaURL, cedanaAuthToken)
 		if err != nil {
@@ -36,13 +31,8 @@ to quickly create a Cobra application.`,
 
 var listClusterCmd = &cobra.Command{
 	Use:   "cluster",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "List all existing clusters under given org",
+	Long:  `List all existing clusters of a given org.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		clusters, err := client.ListClusters(cedanaURL, cedanaAuthToken)
 		if err != nil {
@@ -61,13 +51,8 @@ to quickly create a Cobra application.`,
 // nodeCmd represents the node command
 var listNodeCmd = &cobra.Command{
 	Use:   "node",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "List all existing nodes under given cluster",
+	Long:  `List all existing nodes of a given cluster.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		clusterName, err := cmd.Flags().GetString("cluster")
 		if err != nil {
@@ -91,13 +76,8 @@ to quickly create a Cobra application.`,
 // podCmd represents the pod command
 var listPodCmd = &cobra.Command{
 	Use:   "pod",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "List all existing pods under given namespace of a cluster",
+	Long:  `List all existing pods of a given cluster under a specific namespace.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		clusterName, err := cmd.Flags().GetString("cluster")
 		if err != nil {
@@ -138,10 +118,10 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// podCmd.PersistentFlags().String("foo", "", "A help for foo")
-	listPodCmd.PersistentFlags().String("cluster", "", "A help for foo")
-	listPodCmd.PersistentFlags().String("namespace", "", "A help for foo")
-	listNodeCmd.PersistentFlags().String("cluster", "", "A help for foo")
-	listNodeCmd.PersistentFlags().String("namespace", "", "A help for foo")
+	listPodCmd.PersistentFlags().String("cluster", "", "The name of the cluster")
+	listPodCmd.PersistentFlags().String("namespace", "", "The kubernetes namespace the resource belongs to")
+	listNodeCmd.PersistentFlags().String("cluster", "", "The name of the cluster")
+	listNodeCmd.PersistentFlags().String("namespace", "", "The kubernetes namespace the resource belongs to")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// podCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
