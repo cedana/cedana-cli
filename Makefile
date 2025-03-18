@@ -10,7 +10,7 @@ build:
 	go build -o $(BINARY_NAME)
 
 install: build
-	$(SUDO) mv $(BINARY_NAME) $(INSTALL_PATH)
+	$(SUDO) install $(BINARY_NAME) $(INSTALL_PATH)
 
 clean:
 	$(SUDO) rm -f $(INSTALL_PATH)/$(BINARY_NAME)
