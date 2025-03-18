@@ -2,11 +2,11 @@
 
 <figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
-Here, you will find information on running the Cedana CLI on your machine. Note that Cedana CLI is different compared to the Cedana Daemon CLI.
+Welcome to our CLI documentation!
 
-Cedana CLI allows you to interact with your managed resources and perform operations such as create, delete and list on them. You will be able to schedule your workloads on demand and view them on kubernetes. We do this by making requests to the Cedana URL.
+The cedana CLI serves as the interface to our managed service, allowing you to deploy, inspect and manage workloads. We use Kueue extensively in the background to effectively schedule workloads, while running our Kubernetes controller in the background to seamlessly rebalance your HPC, ML or otherwise computation-heavy workloads with no interruptions. 
 
-For detailed documentation on our managed Kubernetes or the larger Cedana system, please see [here](https://docs.cedana.ai).
+For detailed documentation on installing our managed Kubernetes or the larger Cedana ecosystem, please see [here](https://docs.cedana.ai).
 
 ### Quick start
 
