@@ -6,6 +6,8 @@
 
 * [Installation](get-started/installation.md)
 * [Authentication](get-started/authentication.md)
+* [Examples](get-started/examples.md)
+* [Workload Scheduling Mechanism](get-started/workload-management.md)
 
 
 ## References
