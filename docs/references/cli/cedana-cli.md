@@ -4,7 +4,7 @@ Instance brokerage and orchestration system for Cedana
 
 ### Synopsis
 
-
+```
  ________  _______   ________  ________  ________   ________
 |\   ____\|\  ___ \ |\   ___ \|\   __  \|\   ___  \|\   __  \
 \ \  \___|\ \   __/|\ \  \_|\ \ \  \|\  \ \  \\ \  \ \  \|\  \
@@ -16,7 +16,8 @@ Instance brokerage and orchestration system for Cedana
     
  Instance Brokerage, Orchestration and Migration System for Cedana.
  Property of Cedana, Corp.
-
+ 
+``` 
 
 ### Options
 
