@@ -8,7 +8,7 @@ This repo contains a CLI tool to allow developers to experiment with our system.
 
 To build & install from source:
 ```bash
-make install
+make
 ```
 
 To get started:
