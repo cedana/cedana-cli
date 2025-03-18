@@ -12,7 +12,7 @@ For detailed documentation on our managed Kubernetes or the larger Cedana system
 
 First, ensure that you have Cedana CLI installed on your machine. See [installation](get-started/installation.md).
 
-For all available CLI options, see [CLI reference](references/cli/cedana.md).
+For all available CLI options, see [CLI reference](references/cli/cedana-cli.md).
 
 ### Get started
 
