@@ -1,0 +1,37 @@
+---
+layout:
+  title:
+    visible: false
+  description:
+    visible: false
+  tableOfContents:
+    visible: true
+  outline:
+    visible: true
+  pagination:
+    visible: true
+---
+
+# Cedana CLI
+
+<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+
+Here, you will find information on running the Cedana CLI on your machine. Note that Cedana CLI is different compared to the Cedana Daemon CLI. 
+
+For detailed documentation on our managed Kubernetes or the larger Cedana system, please see [here](https://docs.cedana.ai).
+
+### Quick start
+
+First, ensure that you have Cedana CLI installed on your machine. See [installation](get-started/installation.md).
+
+For all available CLI options, see [CLI reference](references/cli/cedana.md).
+
+### Get started
+
+* [Quick start](./#quick-start)
+* [Installation](get-started/installation.md)
+* [Authentication](get-started/authentication.md)
+
+### References
+
+* [CLI reference](references/cli/cedana.md)

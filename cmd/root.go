@@ -45,6 +45,7 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "c", "", "path to cedana-config json file")
+	rootCmd.AddCommand(docGenCmd)
 }
 
 // initConfig reads environment variables and initializes the configuration
