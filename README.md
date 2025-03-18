@@ -6,11 +6,9 @@ This repo contains a CLI tool to allow developers to experiment with our system.
 
 ## Usage
 
-To build from source:
+To build & install from source:
 ```bash
-go build
-# install on linux
-install ./cedana-cli /usr/local/bin
+make install
 ```
 
 To get started:
