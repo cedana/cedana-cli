@@ -1,5 +1,3 @@
-# Examples
-
 We have developed several practical examples demonstrating our CLI tool in action to help you quickly understand and implement the existing commands.
 
 # Creating Workloads

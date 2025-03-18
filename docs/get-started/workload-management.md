@@ -18,6 +18,8 @@ Some of the components involved in the system include:
 
 <figure><img src="../.gitbook/assets/workload.png" alt=""><figcaption><p></p></figcaption></figure>
 
+We also allow you to store and access files running inside your workload through s3 bucket volume mounts. 
+
 ## Final Design
 
 Here we create two workloads. Since the clusterqueue resource limit is set to 64 cores and the job requests 32 cores each, We are able to admit two jobs based on the configuration. The pods are in pending state waiting for karpenter nodepool to spin up nodes.
