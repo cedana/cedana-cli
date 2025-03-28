@@ -64,7 +64,7 @@ var deleteWorkloadCmd = &cobra.Command{
 			fmt.Printf("Error parsing JSON payload: %v\n", err)
 			return
 		}
-		resp, err := client.DeleteWorkload(payload, cedanaURL, cedanaAuthToken)
+		resp, err := client.DeleteWorkload(payload)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return

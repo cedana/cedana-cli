@@ -3,12 +3,15 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/cedana/cedana-cli/pkg/config"
 )
 
 // GetClusterNodes makes a POST request to fetch nodes for a given cluster
-func GetClusterNodes(clusterName string, cedanaURL string, cedanaAuthToken string) ([]Node, error) {
+func GetClusterNodes(clusterName string) ([]Node, error) {
+	cedanaURL := config.Global.Connection.URL
+	cedanaAuthToken := config.Global.Connection.AuthToken
 
-	// Create request payload
 	payload := map[string]string{
 		"cluster_name": clusterName,
 	}
