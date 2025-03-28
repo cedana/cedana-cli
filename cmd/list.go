@@ -13,20 +13,7 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all existing components of a resource",
-	Long:  `List all existing instances of resource. A resource can be a pod, node or a cluster (Lists cluster by default)`,
-	Run: func(cmd *cobra.Command, args []string) {
-		clusters, err := client.ListClusters(cedanaURL, cedanaAuthToken)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			return
-		}
-
-		// Print the clusters
-		fmt.Printf("Found %d clusters:\n", len(clusters))
-		for _, cluster := range clusters {
-			fmt.Printf("- %s: %s\n", cluster.Name, cluster.ID)
-		}
-	},
+	Long:  `List all existing instances of resource. A resource can be a pod, node or a cluster`,
 }
 
 var listClusterCmd = &cobra.Command{
@@ -34,13 +21,13 @@ var listClusterCmd = &cobra.Command{
 	Short: "List all existing clusters under given org",
 	Long:  `List all existing clusters of a given org.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		clusters, err := client.ListClusters(cedanaURL, cedanaAuthToken)
+		clusters, err := client.ListClusters()
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
 		}
 
-		// Print the clusters
+		// TODO pretty print
 		fmt.Printf("Found %d clusters:\n", len(clusters))
 		for _, cluster := range clusters {
 			fmt.Printf("- %s: %s\n", cluster.Name, cluster.ID)
@@ -59,7 +46,7 @@ var listNodeCmd = &cobra.Command{
 			fmt.Printf("Error retrieving cluster flag: %v\n", err)
 			return
 		}
-		nodes, err := client.GetClusterNodes(clusterName, cedanaURL, cedanaAuthToken)
+		nodes, err := client.GetClusterNodes(clusterName)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return

@@ -3,10 +3,14 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/cedana/cedana-cli/pkg/config"
 )
 
 // ListClusters makes a GET request to fetch all clusters
-func ListClusters(cedanaURL string, cedanaAuthToken string) ([]Cluster, error) {
+func ListClusters() ([]Cluster, error) {
+	cedanaURL := config.Global.Connection.URL
+	cedanaAuthToken := config.Global.Connection.AuthToken
 	var clusters []Cluster
 	resp, err := clientRequest("GET", cedanaURL+"/cluster", cedanaAuthToken, nil)
 	if err != nil {
