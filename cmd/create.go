@@ -34,7 +34,7 @@ var createCmd = &cobra.Command{
 			fmt.Printf("Error parsing JSON payload: %v\n", err)
 			return
 		}
-		resp, err := client.CreateWorkload(payload, cedanaURL, cedanaAuthToken)
+		resp, err := client.CreateWorkload(payload)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return

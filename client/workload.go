@@ -6,7 +6,7 @@ import (
 )
 
 // GetClusterNodes makes a POST request to fetch nodes for a given cluster
-func CreateWorkload(payload interface{}, cedanaURL string, cedanaAuthToken string) (string, error) {
+func CreateWorkload(payload interface{}) (string, error) {
 
 	resp, err := clientRequest("POST", cedanaURL+"/cluster/workload", cedanaAuthToken, payload)
 	if err != nil {
