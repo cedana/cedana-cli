@@ -38,6 +38,9 @@ func DeleteWorkload(payload []byte, cedanaURL string, cedanaAuthToken string, co
 	} else {
 		resp, err = clientRequest("POST", cedanaURL+"/cluster/workload", cedanaAuthToken, payload)
 	}
+	if err != nil {
+		return "", fmt.Errorf("error sending request: %v", err)
+	}
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
