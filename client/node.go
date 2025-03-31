@@ -10,6 +10,7 @@ import (
 // GetClusterNodes makes a POST request to fetch nodes for a given cluster
 func GetClusterNodes(clusterName string) ([]Node, error) {
 	cedanaURL := config.Global.Connection.URL
+	fmt.Println("cedanaURL: ", cedanaURL)
 	cedanaAuthToken := config.Global.Connection.AuthToken
 
 	payload := map[string]string{

@@ -5,21 +5,27 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cedana/cedana-cli/client"
+	"github.com/cedana/cedana/pkg/style"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 )
 
+// Parent list command
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all existing components of a resource",
-	Long:  `List all existing instances of resource. A resource can be a pod, node or a cluster`,
+	Args:  cobra.ArbitraryArgs,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return nil
+	},
 }
 
 var listClusterCmd = &cobra.Command{
 	Use:   "cluster",
-	Short: "List all existing clusters under given org",
-	Long:  `List all existing clusters of a given org.`,
+	Short: "List all active managed clusters for the organization",
 	Run: func(cmd *cobra.Command, args []string) {
 		clusters, err := client.ListClusters()
 		if err != nil {
@@ -35,28 +41,50 @@ var listClusterCmd = &cobra.Command{
 	},
 }
 
-// nodeCmd represents the node command
 var listNodeCmd = &cobra.Command{
-	Use:   "node",
-	Short: "List all existing nodes under given cluster",
-	Long:  `List all existing nodes of a given cluster.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:     "node",
+	Short:   "List all existing nodes under given cluster",
+	Aliases: []string{"ls"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		clusterName, err := cmd.Flags().GetString("cluster")
 		if err != nil {
-			fmt.Printf("Error retrieving cluster flag: %v\n", err)
-			return
-		}
-		nodes, err := client.GetClusterNodes(clusterName)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			return
+			return fmt.Errorf("failed to get cluster flag: %w", err)
 		}
 
-		// Print the nodes
-		fmt.Printf("Found %d nodes:\n", len(nodes))
-		for _, node := range nodes {
-			fmt.Printf("- %s (%s): %s\n", node.Name, node.InstanceType, node.ID)
+		nodes, err := client.GetClusterNodes(clusterName)
+		if err != nil {
+			return err
 		}
+
+		if len(nodes) == 0 {
+			fmt.Println("No nodes to show")
+			return nil
+		}
+
+		tableWriter := table.NewWriter()
+		tableWriter.SetStyle(style.TableStyle)
+		tableWriter.SetOutputMirror(os.Stdout)
+		tableWriter.Style().Options.SeparateRows = false
+
+		tableWriter.AppendHeader(table.Row{
+			"Name",
+			"Instance Type",
+			"ID",
+		})
+
+		for _, node := range nodes {
+			tableWriter.AppendRow(table.Row{
+				node.Name,
+				node.InstanceType,
+				node.ID,
+			})
+		}
+
+		tableWriter.Render()
+
+		fmt.Printf("\n%d nodes found\n", len(nodes))
+		return nil
 	},
 }
 
@@ -76,7 +104,7 @@ var listPodCmd = &cobra.Command{
 			fmt.Printf("Error retrieving namespace flag: %v\n", err)
 			return
 		}
-		pods, err := client.GetClusterPods(clusterName, clusterNamespace, cedanaURL, cedanaAuthToken)
+		pods, err := client.GetClusterPods(clusterName, clusterNamespace)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
