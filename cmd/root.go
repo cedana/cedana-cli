@@ -11,6 +11,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// init initializes the command and flags
+func init() {
+	cobra.EnableTraverseRunHooks = true
+
+	rootCmd.AddCommand(docGenCmd)
+
+	// Add root flags
+	rootCmd.PersistentFlags().
+		String(flags.ConfigFlag.Full, "", "one-time config JSON string (merge with existing config)")
+	rootCmd.PersistentFlags().String(flags.ConfigDirFlag.Full, "", "custom config directory")
+	rootCmd.MarkPersistentFlagDirname(flags.ConfigDirFlag.Full)
+	rootCmd.MarkFlagsMutuallyExclusive(flags.ConfigFlag.Full, flags.ConfigDirFlag.Full)
+}
+
 var (
 	// Used for flags.
 	rootCmd = &cobra.Command{
@@ -54,10 +68,4 @@ func Execute(ctx context.Context, version string) error {
 	rootCmd.SilenceUsage = true // only show usage when true usage error
 
 	return rootCmd.ExecuteContext(ctx)
-}
-
-// init initializes the command and flags
-func init() {
-	rootCmd.AddCommand(docGenCmd)
-	rootCmd.AddCommand(listCmd)
 }

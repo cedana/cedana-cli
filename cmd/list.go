@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/cedana/cedana-cli/client"
+	"github.com/cedana/cedana-cli/pkg/flags"
 	"github.com/cedana/cedana/pkg/style"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
@@ -128,16 +129,13 @@ func init() {
 	listCmd.AddCommand(listClusterCmd)
 	listCmd.AddCommand(listNodeCmd)
 
-	// Here you will define your flags and configuration settings.
+	listPodCmd.PersistentFlags().
+		StringP(flags.ClusterFlag.Full, flags.ClusterFlag.Short, "", "cluster name")
+	listNodeCmd.PersistentFlags().
+		StringP(flags.ClusterFlag.Full, flags.ClusterFlag.Short, "", "cluster name")
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// podCmd.PersistentFlags().String("foo", "", "A help for foo")
-	listPodCmd.PersistentFlags().String("cluster", "", "The name of the cluster")
-	listPodCmd.PersistentFlags().String("namespace", "", "The kubernetes namespace the resource belongs to")
-	listNodeCmd.PersistentFlags().String("cluster", "", "The name of the cluster")
-	listNodeCmd.PersistentFlags().String("namespace", "", "The kubernetes namespace the resource belongs to")
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// podCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	listPodCmd.PersistentFlags().
+		StringP(flags.NamespaceFlag.Full, flags.NamespaceFlag.Short, "", "namespace")
+	listNodeCmd.PersistentFlags().
+		StringP(flags.NamespaceFlag.Full, flags.NamespaceFlag.Short, "", "namespace")
 }
