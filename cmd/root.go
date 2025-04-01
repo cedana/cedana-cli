@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/cedana/cedana-cli/pkg/config"
 	"github.com/cedana/cedana-cli/pkg/flags"
