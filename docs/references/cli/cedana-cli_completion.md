@@ -17,7 +17,8 @@ See each sub-command's help for details on how to use the generated script.
 ### Options inherited from parent commands
 
 ```
-  -c, --cedana-config string   path to cedana-config json file
+      --config string       one-time config JSON string (merge with existing config)
+      --config-dir string   custom config directory
 ```
 
 ### SEE ALSO

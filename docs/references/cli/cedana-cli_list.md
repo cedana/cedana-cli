@@ -2,14 +2,6 @@
 
 List all existing components of a resource
 
-### Synopsis
-
-List all existing instances of resource. A resource can be a pod, node or a cluster (Lists cluster by default)
-
-```
-cedana-cli list [flags]
-```
-
 ### Options
 
 ```
@@ -19,13 +11,14 @@ cedana-cli list [flags]
 ### Options inherited from parent commands
 
 ```
-  -c, --cedana-config string   path to cedana-config json file
+      --config string       one-time config JSON string (merge with existing config)
+      --config-dir string   custom config directory
 ```
 
 ### SEE ALSO
 
 * [cedana-cli](cedana-cli.md)	 - Instance brokerage and orchestration system for Cedana
-* [cedana-cli list cluster](cedana-cli_list_cluster.md)	 - List all existing clusters under given org
+* [cedana-cli list cluster](cedana-cli_list_cluster.md)	 - List all active managed clusters for the organization
 * [cedana-cli list node](cedana-cli_list_node.md)	 - List all existing nodes under given cluster
 * [cedana-cli list pod](cedana-cli_list_pod.md)	 - List all existing pods under given namespace of a cluster
 
