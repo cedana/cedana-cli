@@ -53,6 +53,78 @@ The script uses the following default values that you may need to adjust:
 
 ## Execution Process
 
+Sample workload.yml file:
+
+```
+cluster_name: your-eks-cluster
+workload:
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: JOB_NAME
+    namespace: cedana
+    labels:
+      kueue.x-k8s.io/queue-name: user-queue
+  spec:
+    template:
+      spec:
+        restartPolicy: Never
+        volumes:
+          - name: storage
+            persistentVolumeClaim:
+              claimName: s3-simulation-pvc
+        containers:
+          - name: gromacs
+            image: gromacs/gromacs:latest
+            resources:
+              requests:
+                cpu: "16"
+                memory: "16Gi"
+              limits:
+                cpu: "32"
+                memory: "32Gi"
+            volumeMounts:
+              - name: storage
+                mountPath: /data
+            command: ["/bin/bash", "-c"]
+            args:
+              - |
+                set -ex  # Exit on error and print commands
+                cp -rf /data/gromacs_test /gromacs_test
+                mkdir -p /gromacs_test
+                cd /gromacs_test/WORKING_DIR
+                gmx pdb2gmx -f "WORKING_DIR.pdb" -o prep_processed.gro -ff amber99sb -water tip3p
+                gmx editconf -f prep_processed.gro -o prep_newbox.gro -bt dodecahedron -d 1.5 -c
+                gmx solvate -cp prep_newbox.gro -cs spc216.gro -o prep_solv.gro -p topol.top
+                gmx grompp -f ../ions.mdp -c prep_solv.gro -p topol.top -o ions.tpr
+                echo "13" | gmx genion -s ions.tpr -o prep_solv_ions.gro -p topol.top -pname NA -nname CL -neutral
+                gmx grompp -f ../em.mdp -c prep_solv_ions.gro -p topol.top -o em.tpr
+                gmx mdrun -deffnm em
+                echo -e "1\n0" | gmx trjconv -s em.tpr -f em.gro -o em_centered.gro -pbc mol -center
+                gmx grompp -f ../nvt.mdp -c em_centered.gro -r em_centered.gro -p topol.top -o nvt.tpr
+                gmx mdrun -deffnm nvt
+                echo -e "1\n0" | gmx trjconv -s nvt.tpr -f nvt.gro -o nvt_centered.gro -pbc mol -center
+                gmx grompp -f ../npt.mdp -c nvt_centered.gro -r nvt_centered.gro -t nvt.cpt -p topol.top -o npt.tpr
+                cp -rf /gromacs_test /data/gromacs_output
+                gmx mdrun -deffnm npt
+                echo -e "1\n0" | gmx trjconv -s npt.tpr -f npt.gro -o npt_centered.gro -pbc mol -center
+                python ../find_number.py
+                {
+                  read receptor_start
+                  read receptor_end
+                  read ligand_start
+                  read ligand_end
+                } < atom_number.txt
+                gmx make_ndx -f npt_centered.gro -o index.ndx <<< "q"
+                group_count=$(grep "\[" index.ndx | wc -l)
+                echo -e "a ${receptor_start}-${receptor_end}\nname $((group_count)) receptor\na ${ligand_start}-${ligand_end}\nname $((group_count + 1)) ligand\nq" | gmx make_ndx -f npt_centered.gro -n index.ndx -o index.ndx
+                gmx grompp -f ../md.mdp -c npt_centered.gro -t npt.cpt -p topol.top -n index.ndx -o md.tpr
+                gmx mdrun -deffnm md
+                echo -e "51\n52" | gmx energy -f md.edr -o interaction_energy.xvg
+                cd ..
+                cp -rf /gromacs_test/WORKING_DIR /data/gromacs_output/WORKING_DIR
+```
+
 To execute the script run:
    ```bash
    chmod +x create-workload.sh
