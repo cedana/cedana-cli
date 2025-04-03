@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/cedana/cedana-cli/pkg/config"
 )
 
 // GetClusterNodes makes a POST request to fetch nodes for a given cluster
-func CreateWorkload(payload []byte, cedanaURL string, cedanaAuthToken string, contentType string) (string, error) {
+func CreateWorkload(payload []byte, contentType string) (string, error) {
+	cedanaURL := config.Global.Connection.URL
+	cedanaAuthToken := config.Global.Connection.AuthToken
+
 	var resp *http.Response
 	var err error
 
@@ -18,7 +23,7 @@ func CreateWorkload(payload []byte, cedanaURL string, cedanaAuthToken string, co
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("error sending request: %v", err)
+		return "", fmt.Errorf("%v", err)
 	}
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -28,8 +33,10 @@ func CreateWorkload(payload []byte, cedanaURL string, cedanaAuthToken string, co
 	return string(bodyBytes), nil
 }
 
-// GetClusterNodes makes a POST request to fetch nodes for a given cluster
-func DeleteWorkload(payload []byte, cedanaURL string, cedanaAuthToken string, contentType string) (string, error) {
+func DeleteWorkload(payload []byte, contentType string) (string, error) {
+	cedanaURL := config.Global.Connection.URL
+	cedanaAuthToken := config.Global.Connection.AuthToken
+
 	var resp *http.Response
 	var err error
 
@@ -38,9 +45,11 @@ func DeleteWorkload(payload []byte, cedanaURL string, cedanaAuthToken string, co
 	} else {
 		resp, err = clientRequest("DELETE", cedanaURL+"/cluster/workload", cedanaAuthToken, payload)
 	}
+
 	if err != nil {
-		return "", fmt.Errorf("error sending request: %v", err)
+		return "", fmt.Errorf("%v", err)
 	}
+
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {

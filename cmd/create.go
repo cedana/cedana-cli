@@ -32,7 +32,8 @@ var createCmd = &cobra.Command{
 			fmt.Printf("Error reading payload file %s: %v\n", payloadPath, err)
 			return
 		}
-		resp, err := client.CreateWorkload(payloadData, cedanaURL, cedanaAuthToken, contentType)
+		resp, err := client.CreateWorkload(payloadData, contentType)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
@@ -51,17 +52,21 @@ var createWorkloadCmd = &cobra.Command{
 			fmt.Printf("Error retrieving payload flag: %v\n", err)
 			return
 		}
+    
 		contentType, err := cmd.Flags().GetString("contentType")
 		if err != nil {
 			fmt.Printf("Error retrieving contentType flag: %v\n", err)
 			return
 		}
+    
 		payloadData, err := os.ReadFile(payloadPath)
 		if err != nil {
 			fmt.Printf("Error reading payload file %s: %v\n", payloadPath, err)
 			return
 		}
-		resp, err := client.CreateWorkload(payloadData, cedanaURL, cedanaAuthToken, contentType)
+    
+		resp, err := client.CreateWorkload(payloadData, contentType)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return

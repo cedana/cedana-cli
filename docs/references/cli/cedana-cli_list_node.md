@@ -2,10 +2,6 @@
 
 List all existing nodes under given cluster
 
-### Synopsis
-
-List all existing nodes of a given cluster.
-
 ```
 cedana-cli list node [flags]
 ```
@@ -13,15 +9,16 @@ cedana-cli list node [flags]
 ### Options
 
 ```
-      --cluster string     The name of the cluster
+  -c, --cluster string     cluster name
   -h, --help               help for node
-      --namespace string   The kubernetes namespace the resource belongs to
+  -n, --namespace string   namespace
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -c, --cedana-config string   path to cedana-config json file
+      --config string       one-time config JSON string (merge with existing config)
+      --config-dir string   custom config directory
 ```
 
 ### SEE ALSO

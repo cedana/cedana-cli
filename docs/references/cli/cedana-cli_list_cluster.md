@@ -1,10 +1,6 @@
 ## cedana-cli list cluster
 
-List all existing clusters under given org
-
-### Synopsis
-
-List all existing clusters of a given org.
+List all active managed clusters for the organization
 
 ```
 cedana-cli list cluster [flags]
@@ -19,7 +15,8 @@ cedana-cli list cluster [flags]
 ### Options inherited from parent commands
 
 ```
-  -c, --cedana-config string   path to cedana-config json file
+      --config string       one-time config JSON string (merge with existing config)
+      --config-dir string   custom config directory
 ```
 
 ### SEE ALSO

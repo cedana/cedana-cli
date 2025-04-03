@@ -17,12 +17,14 @@ Instance brokerage and orchestration system for Cedana
  Instance Brokerage, Orchestration and Migration System for Cedana.
  Property of Cedana, Corp.
 
+ dev
 
 ### Options
 
 ```
-  -c, --cedana-config string   path to cedana-config json file
-  -h, --help                   help for cedana-cli
+      --config string       one-time config JSON string (merge with existing config)
+      --config-dir string   custom config directory
+  -h, --help                help for cedana-cli
 ```
 
 ### SEE ALSO

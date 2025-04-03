@@ -32,7 +32,9 @@ var deleteCmd = &cobra.Command{
 			fmt.Printf("Error reading payload file %s: %v\n", payloadPath, err)
 			return
 		}
-		resp, err := client.DeleteWorkload(payloadData, cedanaURL, cedanaAuthToken, contentType)
+    
+		resp, err := client.CreateWorkload(payloadData, contentType)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
@@ -61,7 +63,9 @@ var deleteWorkloadCmd = &cobra.Command{
 			fmt.Printf("Error reading payload file %s: %v\n", payloadPath, err)
 			return
 		}
-		resp, err := client.DeleteWorkload(payloadData, cedanaURL, cedanaAuthToken, contentType)
+    
+		resp, err := client.DeleteWorkload(payloadData, contentType)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return

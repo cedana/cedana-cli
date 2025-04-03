@@ -1,18 +1,30 @@
 package cmd
 
 import (
-	"os"
+	"context"
+	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/cedana/cedana-cli/pkg/config"
+	"github.com/cedana/cedana-cli/pkg/flags"
+	"github.com/cedana/cedana-cli/pkg/logging"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-var (
-	cedanaConfigFile string
-	cedanaURL        string
-	cedanaAuthToken  string
-	logger           zerolog.Logger
-)
+// init initializes the command and flags
+func init() {
+	cobra.EnableTraverseRunHooks = true
+
+	rootCmd.AddCommand(docGenCmd)
+
+	// Add root flags
+	rootCmd.PersistentFlags().
+		String(flags.ConfigFlag.Full, "", "one-time config JSON string (merge with existing config)")
+	rootCmd.PersistentFlags().String(flags.ConfigDirFlag.Full, "", "custom config directory")
+	rootCmd.MarkPersistentFlagDirname(flags.ConfigDirFlag.Full)
+	rootCmd.MarkFlagsMutuallyExclusive(flags.ConfigFlag.Full, flags.ConfigDirFlag.Full)
+}
+
 var (
 	// Used for flags.
 	rootCmd = &cobra.Command{
@@ -30,39 +42,30 @@ var (
     ` +
 			"\n Instance Brokerage, Orchestration and Migration System for Cedana." +
 			"\n Property of Cedana, Corp.\n",
+
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			conf, _ := cmd.Flags().GetString(flags.ConfigFlag.Full)
+			confDir, _ := cmd.Flags().GetString(flags.ConfigDirFlag.Full)
+			if err := config.Init(config.InitArgs{
+				Config:    conf,
+				ConfigDir: confDir,
+			}); err != nil {
+				return fmt.Errorf("Failed to initialize config: %w", err)
+			}
+
+			logging.SetLevel(config.Global.LogLevel)
+
+			return nil
+		},
 	}
 )
 
-// Execute executes the root command
-func Execute() error {
-	return rootCmd.Execute()
-}
+func Execute(ctx context.Context, version string) error {
+	ctx = log.With().Str("context", "cmd").Logger().WithContext(ctx)
 
-// init initializes the command and flags
-func init() {
-	// Initialize logger
-	logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+	rootCmd.Version = version
+	rootCmd.Long = rootCmd.Long + "\n " + version
+	rootCmd.SilenceUsage = true // only show usage when true usage error
 
-	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&cedanaConfigFile, "cedana-config", "c", "", "path to cedana-config json file")
-	rootCmd.AddCommand(docGenCmd)
-}
-
-// initConfig reads environment variables and initializes the configuration
-func initConfig() {
-	var ok bool
-
-	// Get Cedana URL from environment
-	cedanaURL, ok = os.LookupEnv("CEDANA_URL")
-	if !ok {
-		logger.Error().Msg("CEDANA_URL not set")
-		os.Exit(1)
-	}
-
-	// Get auth token from environment
-	cedanaAuthToken, ok = os.LookupEnv("CEDANA_AUTH_TOKEN")
-	if !ok {
-		logger.Error().Msg("CEDANA_AUTH_TOKEN not set")
-		os.Exit(1)
-	}
+	return rootCmd.ExecuteContext(ctx)
 }
