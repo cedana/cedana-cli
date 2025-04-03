@@ -7,8 +7,13 @@
 * [Installation](get-started/installation.md)
 * [Authentication](get-started/authentication.md)
 * [Examples](get-started/examples.md)
-* [Workload Scheduling Mechanism](get-started/workload-management.md)
 
+## Examples
+* [Scheduling a Single GROMACS Workload](examples/gromacs.md)
+* [Scheduling Hundreds of Workloads ](examples/gromacs-creation-automation.md)
+
+## Guides
+* [Workload Scheduling Mechanism](guides/workload-management.md)
 
 ## References
 * [CLI](references/cli/README.md)
