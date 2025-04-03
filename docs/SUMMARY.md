@@ -6,6 +6,7 @@
 
 * [Installation](get-started/installation.md)
 * [Authentication](get-started/authentication.md)
+* [Configuration](get-started/config.md)
 
 ## Examples
 * [Scheduling a Single GROMACS Workload](examples/gromacs.md)
