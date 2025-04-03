@@ -7,8 +7,11 @@
 * [Installation](get-started/installation.md)
 * [Authentication](get-started/authentication.md)
 * [Examples](get-started/examples.md)
-* [Workload Scheduling Mechanism](get-started/workload-management.md)
 
+## Guides
+
+* [Workload Scheduling Mechanism](guides/workload-management.md)
+* [Workload Scheduling Mechanism](guides/workload-creation-automation.md)
 
 ## References
 * [CLI](references/cli/README.md)
