@@ -8,10 +8,12 @@
 * [Authentication](get-started/authentication.md)
 * [Examples](get-started/examples.md)
 
-## Guides
+## Examples
+* [Scheduling a Single GROMACS Workload](get-started/gromacs.md)
+* [Scheduling Hundreds of Worloads ](examples/gromacs-creation-automation.md)
 
+## Guides
 * [Workload Scheduling Mechanism](guides/workload-management.md)
-* [Workload Scheduling Mechanism](guides/workload-creation-automation.md)
 
 ## References
 * [CLI](references/cli/README.md)
