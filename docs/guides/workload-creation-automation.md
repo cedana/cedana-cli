@@ -1,8 +1,8 @@
-# Running 200+ Workloads with Cedana CLI
+# Scheduling 200+ GROMACS Workloads with Cedana 
 
 ## Overview
 
-This documentation explains how to use the create-workload.sh script to effectively submit and manage large batches of molecular dynamics simulation workloads to Cedana from pdb files stored in AWS S3 storage.
+This documentation runs through an example using a script to effectively submit and manage large batches of molecular dynamics simulation workloads to Cedana from pdb files stored in AWS S3 storage.
 
 ## Prerequisites
 
