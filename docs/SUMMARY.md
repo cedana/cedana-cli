@@ -9,8 +9,8 @@
 * [Examples](get-started/examples.md)
 
 ## Examples
-* [Scheduling a Single GROMACS Workload](get-started/gromacs.md)
-* [Scheduling Hundreds of Worloads ](examples/gromacs-creation-automation.md)
+* [Scheduling a Single GROMACS Workload](examples/gromacs.md)
+* [Scheduling Hundreds of Workloads ](examples/gromacs-creation-automation.md)
 
 ## Guides
 * [Workload Scheduling Mechanism](guides/workload-management.md)
