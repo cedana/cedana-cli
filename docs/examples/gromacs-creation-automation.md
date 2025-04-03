@@ -15,7 +15,7 @@ Before running the script, ensure you have the following:
 
 ## Script Configuration
 
-```
+```bash
 #!/bin/bash
 
 BUCKET_NAME="your-bucket-name"
@@ -55,7 +55,7 @@ The script uses the following default values that you may need to adjust:
 
 Sample workload.yml file:
 
-```
+```yaml
 cluster_name: your-eks-cluster
 workload:
   apiVersion: batch/v1
