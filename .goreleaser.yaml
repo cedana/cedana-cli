@@ -44,12 +44,3 @@ nfpms:
     
     suggests:
       - criu 
-brews: 
-  - homepage: cedana.ai 
-    folder: Formula 
-    commit_author: 
-      name: nravic 
-      email: nravic@cedana.ai
-    tap: 
-      owner: cedana 
-      name: homebrew-cedana-cli 
